@@ -56,6 +56,6 @@ x = random.normal(subkey, (1000000,))
 t = time.time()
 selu(x).block_until_ready()
 print("time taken with jit:", time.time()-t)
+print("BYE")
 
 # note~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
