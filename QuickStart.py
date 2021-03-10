@@ -2,6 +2,7 @@ import jax.numpy as jnp
 from jax import grad, jit, vmap
 from jax import random
 import time
+import jax
 import numpy as np
 from jax import device_put
 
@@ -44,18 +45,30 @@ def selu(x, alpha=1.67, lmbda=1.05):
     return lmbda * jnp.where(x > 0, x, alpha * (jnp.exp(x) - 1))
 
 
-key = random.PRNGKey(0)
-# key, subkey = random.split(key)
-x = random.normal(key, (1000000,))
-t = time.time()
-selu(x).block_until_ready()
-print("time taken no jit:", time.time()-t)
-selu_jit = jit(selu)
-key, subkey = random.split(key)
-x = random.normal(subkey, (1000000,))
-t = time.time()
-selu(x).block_until_ready()
-print("time taken with jit:", time.time()-t)
-print("BYE")
+def random_stuff():
+    key = random.PRNGKey(0)
+    # key, subkey = random.split(key)
+    x = random.normal(key, (1000000,))
+    t = time.time()
+    selu(x).block_until_ready()
+    print("time taken no jit:", time.time()-t)
+    selu_jit = jit(selu)
+    key, subkey = random.split(key)
+    x = random.normal(subkey, (1000000,))
+    t = time.time()
+    selu(x).block_until_ready()
+    print("time taken with jit:", time.time()-t)
+    print("BYE")
 
-# note~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# note~~~~~~~~~~~~~~~~~~~~~~~Understanding partial ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+from functools import partial
+
+
+def f(a, b, c):
+    print(f'hi my args are, a:{a}, b:{b}, c:{c}')
+
+
+if __name__ == '__main__':
+    f(1,2,3)
+    partial(f, 1, 2, 3)()
+    partial(f, a=(1,))(b='a', c='b')
