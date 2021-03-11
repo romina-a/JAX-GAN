@@ -1,9 +1,8 @@
 import jax.numpy as jnp
 import numpy as np
-from jax import grad, jit, vmap, value_and_grad
+from jax import jit, vmap, value_and_grad
 from jax import random
 from functools import partial
-from jax.scipy.special import logsumexp
 
 from torch.utils import data
 from torchvision.datasets import MNIST
@@ -75,12 +74,12 @@ dist_dim = 100
 d_layer_sizes = [784, 512, 256, 1]
 g_layer_sizes = [dist_dim, 256, 512, 784]
 # param_scale = 0.1
-d_step_size = 0.0002
-g_step_size = 0.0002
-num_epochs = 10
+d_step_size = 0.00075
+g_step_size = 0.00015
+num_epochs = 500
 batch_size = 128
 # n_targets = 10
-digit = 1
+digit = 0
 
 
 def relu(x):
@@ -89,6 +88,10 @@ def relu(x):
 
 def sigmoid(x):
     return jnp.exp(x)/(1.+jnp.exp(x))
+
+
+def BCELoss(predictions, targets):
+    return -jnp.mean(jnp.log(predictions) * targets + jnp.log(1 - predictions) * (1 - targets))
 
 
 # @partial(vmap, in_axes=(None, 0), out_axes=0) TODO: why doesn't work?
@@ -125,7 +128,7 @@ batched_gen_generate = vmap(gen_generate, in_axes=(None, 0), out_axes=0)
 
 def disc_loss(d_params, images, targets):
     preds = batched_disc_predict(d_params, images)
-    return -jnp.mean(jnp.log(preds) * targets + jnp.log(1-preds) * (1-targets))
+    return BCELoss(preds, targets)
 
 
 @jit
@@ -143,10 +146,10 @@ def update_disc(d_params, images, labels):
 
 
 def gen_loss(g_params, d_params, g_noise):
-    ims = batched_gen_generate(g_params, g_noise)
-    # plt.imshow(jnp.reshape(ims[0], (28, 28)))
+    fake_imgs = batched_gen_generate(g_params, g_noise)
+    # plt.imshow(jnp.reshape(fake_imgs[0], (28, 28)))
     # plt.show()
-    return disc_loss(d_params, ims, jnp.ones(len(ims)))
+    return disc_loss(d_params, fake_imgs, jnp.ones(len(fake_imgs)))
     # return -jnp.mean(preds * one_hot(jnp.zeros(len(preds)), 1))
 
 
@@ -166,6 +169,7 @@ def update_gen(g_params, d_params, g_noise):
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~ Data Loader, I don't understand exactly ~~~~~~~~~~~~~~~~~~~~``
+data_adr = ""
 mnist_dataset = MNIST('./tmp/mnist/', download=True, transform=FlattenAndCast())
 # load training with the generator (makes batch easier I think)
 training_generator = NumpyLoader(mnist_dataset, batch_size=batch_size, num_workers=0)
@@ -183,6 +187,8 @@ key = random.PRNGKey(0)
 key, dkey, gkey = random.split(key, 3)
 d_params = init_network_params(d_layer_sizes, dkey)
 g_params = init_network_params(g_layer_sizes, gkey)
+g_loss_history = []
+d_loss_history = []
 for epoch in range(num_epochs):
     start_time = time.time()
     for real_images, _ in training_generator:
@@ -195,16 +201,20 @@ for epoch in range(num_epochs):
 
         d_t_lbls = 0.9 * d_t_lbls
         d_params, d_loss, d_grad = update_disc(d_params, d_t_imgs, d_t_lbls)
-        print(f'disc grad after update:{d_grad[0][0][0:3, 0:1]}')
-        print(f'disc loss:{d_loss}')
+        # print(f'disc grad after update:{d_grad[0][0][0:3, 0:1]}')
+        # print(f'disc loss:{d_loss}')
 
         # TODO: to create new noise or not to create new noise?
+        #  I believe in all codes I have seen new noise is created, but why?
         # key, subkey = random.split(key)
         # noise = random.normal(subkey, (batch_size, dist_dim), dtype=jnp.float32)
 
         g_params, g_loss, g_grad = update_gen(g_params, d_params, noise)
-        print(f'gen grad after update:{g_grad[0][0][0:3,0:1]}')
-        print(f'gen loss:{g_loss}')
+
+        d_loss_history.append(d_loss)
+        g_loss_history.append(g_loss)
+        # print(f'gen grad after update:{g_grad[0][0][0:3,0:1]}')
+        # print(f'gen loss:{g_loss}')
 
     epoch_time = time.time() - start_time
 
