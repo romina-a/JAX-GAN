@@ -189,6 +189,8 @@ d_params = init_network_params(d_layer_sizes, dkey)
 g_params = init_network_params(g_layer_sizes, gkey)
 g_loss_history = []
 d_loss_history = []
+g_loss_epoch = []
+d_loss_epoch = []
 for epoch in range(num_epochs):
     start_time = time.time()
     for real_images, _ in training_generator:
@@ -211,18 +213,23 @@ for epoch in range(num_epochs):
 
         g_params, g_loss, g_grad = update_gen(g_params, d_params, noise)
 
-        d_loss_history.append(d_loss)
-        g_loss_history.append(g_loss)
+        d_loss_epoch.append(d_loss)
+        g_loss_epoch.append(g_loss)
         # print(f'gen grad after update:{g_grad[0][0][0:3,0:1]}')
         # print(f'gen loss:{g_loss}')
 
     epoch_time = time.time() - start_time
-
     print("Epoch {} in {:0.2f} sec".format(epoch, epoch_time))
 
-    key, subkey = random.split(key)
-    noise = random.normal(subkey, (1, dist_dim), dtype=jnp.float32)
+    g_loss_history.append(np.mean(g_loss_epoch))
+    d_loss_history.append(np.mean(d_loss_epoch))
+    g_loss_epoch = []
+    d_loss_epoch = []
 
-    fake_image = batched_gen_generate(g_params, noise)
-    plt.imshow(jnp.reshape(fake_image, (28, 28)))
-    plt.show()
+    if epoch%100 == 0:
+        key, subkey = random.split(key)
+        noise = random.normal(subkey, (1, dist_dim), dtype=jnp.float32)
+
+        fake_image = batched_gen_generate(g_params, noise)
+        plt.imshow(jnp.reshape(fake_image, (28, 28)))
+        plt.show()
