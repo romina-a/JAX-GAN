@@ -4,3 +4,4 @@ venv/
 tmp
 test*
 __pycache__
+*.pkl

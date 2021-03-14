@@ -11,6 +11,7 @@ from torchvision.datasets import MNIST
 
 import time
 import _pickle as pickle
+import argparse
 
 from matplotlib import pyplot as plt
 
@@ -87,17 +88,14 @@ def load_params(filename, adr='./'):
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~ START OF GAN ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 scale_default = 2e-2
-dist_dim = 100
-d_layer_sizes = [784, 512, 256, 1]
-g_layer_sizes = [dist_dim, 256, 512, 784]
-# param_scale = 0.1
-d_step_size = 0.0002
-g_step_size = 0.0002
-num_epochs = 1000
-batch_size = 128
-# n_targets = 10
-digit = 0
-minimize = True
+dist_dim_default = 100
+d_layer_sizes_default = (784, 512, 256, 1)
+g_layer_sizes_default = (dist_dim_default, 256, 512, 784)
+d_lr_default = 0.0002
+g_lr_default = 0.0002
+num_epochs_default = 1000
+batch_size_default = 128
+digit_default = 0
 
 
 def random_layer_params(m, n, key, scale=scale_default):
@@ -105,7 +103,7 @@ def random_layer_params(m, n, key, scale=scale_default):
     return scale * random.normal(w_key, (n, m)), scale * random.normal(b_key, (n,))
 
 
-def init_network_params(sizes, key):
+def init_network_params(sizes, key, scale=scale_default):
     keys = random.split(key, len(sizes))
     return [random_layer_params(m, n, k) for m, n, k in zip(sizes[:-1], sizes[1:], keys)]
 
@@ -160,16 +158,17 @@ def disc_loss(d_params, images, targets):
 
 
 @jit
-def update_disc(d_params, images, labels):
+def update_disc(d_params, images, labels, d_lr):
     """
 
+    :param images:
     :param g_params:
     :param d_params:
     :param g_noise:
     :return: params, loss value, grads
     """
     dics_loss_value, d_grads = value_and_grad(disc_loss)(d_params, images, labels)
-    return [(w - d_step_size * dw, b - d_step_size * db)
+    return [(w - d_lr * dw, b - d_lr * db)
             for (w, b), (dw, db) in zip(d_params, d_grads)], dics_loss_value, d_grads
 
 
@@ -182,7 +181,7 @@ def gen_loss(g_params, d_params, g_noise):
 
 
 @jit
-def update_gen(g_params, d_params, g_noise):
+def update_gen(g_params, d_params, g_noise, g_lr):
     """
 
     :param g_params:
@@ -192,15 +191,15 @@ def update_gen(g_params, d_params, g_noise):
     """
     g_loss_value, g_grads = value_and_grad(gen_loss)(g_params, d_params, g_noise)
 
-    return [(w - g_step_size * dw, b - g_step_size * db)
+    return [(w - g_lr * dw, b - g_lr * db)
             for (w, b), (dw, db) in zip(g_params, g_grads)], g_loss_value, g_grads
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~ Data Loader, I don't understand exactly ~~~~~~~~~~~~~~~~~~~~
-data_adr = ""
-mnist_dataset = MNIST('./tmp/mnist/', download=True, transform=FlattenAndCast())
-# load training with the generator (makes batch easier I think)
-training_generator = NumpyLoader(mnist_dataset, batch_size=batch_size, num_workers=0)
+# data_adr = ""
+# mnist_dataset = MNIST('./tmp/mnist/', download=True, transform=FlattenAndCast())
+# # load training with the generator (makes batch easier I think)
+# training_generator = NumpyLoader(mnist_dataset, batch_size=batch_size, num_workers=0)
 
 
 # Get full test dataset
@@ -211,11 +210,26 @@ training_generator = NumpyLoader(mnist_dataset, batch_size=batch_size, num_worke
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~ Train GAN ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def train_gan():
+def train_gan(
+        d_init_scale,
+        g_init_scale,
+        num_epochs,
+        d_layer_sizes,
+        g_layer_sizes,
+        batch_size,
+        d_lr,
+        g_lr
+):
+    data_adr = ""
+    mnist_dataset = MNIST('./tmp/mnist/', download=True, transform=FlattenAndCast())
+    # load training with the generator (makes batch easier I think)
+    training_generator = NumpyLoader(mnist_dataset, batch_size=batch_size, num_workers=0)
+
+    dist_dim = g_layer_sizes[0]
     key = random.PRNGKey(0)
     key, dkey, gkey = random.split(key, 3)
-    d_params = init_network_params(d_layer_sizes, dkey)
-    g_params = init_network_params(g_layer_sizes, gkey)
+    d_params = init_network_params(sizes=d_layer_sizes, key=dkey, scale=d_init_scale)
+    g_params = init_network_params(sizes=g_layer_sizes, key=gkey, scale=g_init_scale)
     g_loss_history = []
     d_loss_history = []
     g_loss_epoch = []
@@ -223,7 +237,7 @@ def train_gan():
     for epoch in range(num_epochs):
         start_time = time.time()
         for real_images, _ in training_generator:
-            real_images = (real_images-127.5)/127.5
+            real_images = (real_images - 127.5) / 127.5
             key, subkey = random.split(key)
             noise = random.normal(subkey, (batch_size, dist_dim), dtype=jnp.float32)
             fake_images = batched_gen_generate(g_params, noise)
@@ -232,7 +246,7 @@ def train_gan():
             d_t_lbls = jnp.concatenate([0.9 * jnp.ones(len(real_images)), jnp.zeros(len(fake_images))])
 
             # d_t_lbls = 0.9 * d_t_lbls
-            d_params, d_loss, d_grad = update_disc(d_params, d_t_imgs, d_t_lbls)
+            d_params, d_loss, d_grad = update_disc(d_params, d_t_imgs, d_t_lbls, d_lr)
             # print(f'disc grad after update:{d_grad[0][0][0:3, 0:1]}')
             # print(f'disc loss:{d_loss}')
 
@@ -241,7 +255,7 @@ def train_gan():
             key, subkey = random.split(key)
             noise = random.normal(subkey, (batch_size, dist_dim), dtype=jnp.float32)
 
-            g_params, g_loss, g_grad = update_gen(g_params, d_params, noise)
+            g_params, g_loss, g_grad = update_gen(g_params, d_params, noise, g_lr)
 
             d_loss_epoch.append(d_loss)
             g_loss_epoch.append(g_loss)
@@ -260,7 +274,7 @@ def train_gan():
             key = random.PRNGKey(0)
             noise = random.normal(key, (1, dist_dim), dtype=jnp.float32)
 
-            fake_image = batched_gen_generate(g_params, noise)*127.5+127.5
+            fake_image = batched_gen_generate(g_params, noise) * 127.5 + 127.5
             plt.imshow(jnp.reshape(fake_image, (28, 28)))
             plt.show()
 
@@ -273,6 +287,7 @@ def train_gan():
 
 def load_generator_and_generate_im(n=1):
     g_params = load_params('g_params')
+    dist_dim = g_params[0][0].shape[1]
     key = random.PRNGKey(0)
     noise = random.normal(key, (n, dist_dim), dtype=jnp.float32)
     ims = batched_gen_generate(g_params, noise)
@@ -290,4 +305,31 @@ def load_and_plot_history():
 
 
 if __name__ == '__main__':
-    train_gan()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--d_init_scale", required=False, default=scale_default, type=float,
+                        help="discriminator initial weights variance")
+    parser.add_argument("--g_init_scale", required=False, default=scale_default, type=float,
+                        help="generator initial weights variance")
+    parser.add_argument("--num_epochs", required=False, default=num_epochs_default, type=int,
+                        help="number of epochs")
+    parser.add_argument("--d_layer_sizes", required=False, default=d_layer_sizes_default, type=tuple,
+                        help="discriminator layer sizes")
+    parser.add_argument("--g_layer_sizes", required=False, default=g_layer_sizes_default, type=tuple,
+                        help="generator layer sizes")
+    parser.add_argument("--batch_size", required=False, default=batch_size_default, type=int,
+                        help="training batch size")
+    parser.add_argument("--d_lr", required=False, default=d_lr_default, type=float,
+                        help="discriminator learning rate")
+    parser.add_argument("--g_lr", required=False, default=g_lr_default, type=float,
+                        help="generator layer sizes")
+    args = vars(parser.parse_args())
+    train_gan(
+        d_init_scale=args['d_init_scale'],
+        g_init_scale=args['g_init_scale'],
+        num_epochs=args['num_epochs'],
+        d_layer_sizes=args['d_layer_sizes'],
+        g_layer_sizes=args['g_layer_sizes'],
+        batch_size=args['batch_size'],
+        d_lr=args['d_lr'],
+        g_lr=args['d_lr']
+    )
