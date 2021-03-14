@@ -6,9 +6,6 @@ from functools import partial
 from jax.experimental import stax
 from jax.experimental import optimizers
 
-from torch.utils import data
-from torchvision.datasets import MNIST
-
 import time
 import _pickle as pickle
 import argparse
@@ -16,7 +13,11 @@ import argparse
 from matplotlib import pyplot as plt
 
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~ LOADING MNIST WITH PYTORCH ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~ UTILS FOR LOADING MNIST WITH PYTORCH ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+from torch.utils import data
+from torchvision.datasets import MNIST
+
+
 def numpy_collate(batch):
     if isinstance(batch[0], np.ndarray):
         return np.stack(batch)
@@ -49,6 +50,17 @@ class NumpyLoader(data.DataLoader):
 class FlattenAndCast(object):
     def __call__(self, pic):
         return np.ravel(np.array(pic, dtype=jnp.float32))
+
+
+def get_NumpyLoader(digit, batch_size):
+    data_adr = ""
+    mnist_dataset = MNIST('./tmp/mnist/', download=True, transform=FlattenAndCast())
+    # load training with the generator (makes batch easier I think)
+    idx = mnist_dataset.targets == digit
+    mnist_dataset.data = mnist_dataset.data[idx]
+    mnist_dataset.targets = mnist_dataset.targets[idx]
+    training_generator = NumpyLoader(mnist_dataset, batch_size=batch_size, num_workers=0)
+    return training_generator
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Helper Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -93,7 +105,7 @@ d_layer_sizes_default = (784, 512, 256, 1)
 g_layer_sizes_default = (dist_dim_default, 256, 512, 784)
 d_lr_default = 0.0002
 g_lr_default = 0.0002
-num_epochs_default = 1000
+num_epochs_default = 100
 batch_size_default = 128
 digit_default = 0
 
@@ -218,12 +230,11 @@ def train_gan(
         g_layer_sizes,
         batch_size,
         d_lr,
-        g_lr
+        g_lr,
+        digit,
 ):
-    data_adr = ""
-    mnist_dataset = MNIST('./tmp/mnist/', download=True, transform=FlattenAndCast())
-    # load training with the generator (makes batch easier I think)
-    training_generator = NumpyLoader(mnist_dataset, batch_size=batch_size, num_workers=0)
+
+    training_generator = get_NumpyLoader(digit, batch_size)
 
     dist_dim = g_layer_sizes[0]
     key = random.PRNGKey(0)
@@ -322,6 +333,8 @@ if __name__ == '__main__':
                         help="discriminator learning rate")
     parser.add_argument("--g_lr", required=False, default=g_lr_default, type=float,
                         help="generator layer sizes")
+    parser.add_argument("--digit", required=False, default=digit_default, type=int,
+                        help="generator layer sizes")
     args = vars(parser.parse_args())
     train_gan(
         d_init_scale=args['d_init_scale'],
@@ -331,5 +344,6 @@ if __name__ == '__main__':
         g_layer_sizes=args['g_layer_sizes'],
         batch_size=args['batch_size'],
         d_lr=args['d_lr'],
-        g_lr=args['d_lr']
+        g_lr=args['d_lr'],
+        digit=args['digit']
     )
