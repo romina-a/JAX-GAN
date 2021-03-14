@@ -276,8 +276,8 @@ def train_gan(
         epoch_time = time.time() - start_time
         print("Epoch {} in {:0.2f} sec".format(epoch, epoch_time))
 
-        g_loss_history.append(np.mean(g_loss_epoch))
-        d_loss_history.append(np.mean(d_loss_epoch))
+        g_loss_history.extend(g_loss_epoch)
+        d_loss_history.extend(d_loss_epoch)
         g_loss_epoch = []
         d_loss_epoch = []
 
@@ -312,6 +312,9 @@ def load_and_plot_history():
     g_loss_history = load_obj('g_loss_history')
     plt.plot(d_loss_history, label='discriminator_objective')
     plt.plot(g_loss_history, label='generator_objective')
+    plt.legend()
+    plt.xlabel('iteration')
+    plt.ylabel('objective')
     plt.show()
 
 
@@ -334,7 +337,7 @@ if __name__ == '__main__':
     parser.add_argument("--g_lr", required=False, default=g_lr_default, type=float,
                         help="generator layer sizes")
     parser.add_argument("--digit", required=False, default=digit_default, type=int,
-                        help="generator layer sizes")
+                        help="digit")
     args = vars(parser.parse_args())
     train_gan(
         d_init_scale=args['d_init_scale'],
