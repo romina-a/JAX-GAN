@@ -93,7 +93,7 @@ g_layer_sizes = [dist_dim, 256, 512, 784]
 # param_scale = 0.1
 d_step_size = 0.0002
 g_step_size = 0.0002
-num_epochs = 2000
+num_epochs = 1000
 batch_size = 128
 # n_targets = 10
 digit = 0
@@ -156,7 +156,7 @@ batched_gen_generate = vmap(gen_generate, in_axes=(None, 0), out_axes=0)
 
 def disc_loss(d_params, images, targets):
     preds = batched_disc_predict(d_params, images)
-    return -BCELoss(preds, targets)
+    return BCELoss(preds, targets)
 
 
 @jit
@@ -169,7 +169,7 @@ def update_disc(d_params, images, labels):
     :return: params, loss value, grads
     """
     dics_loss_value, d_grads = value_and_grad(disc_loss)(d_params, images, labels)
-    return [(w + d_step_size * dw, b + d_step_size * db)
+    return [(w - d_step_size * dw, b - d_step_size * db)
             for (w, b), (dw, db) in zip(d_params, d_grads)], dics_loss_value, d_grads
 
 
@@ -192,7 +192,7 @@ def update_gen(g_params, d_params, g_noise):
     """
     g_loss_value, g_grads = value_and_grad(gen_loss)(g_params, d_params, g_noise)
 
-    return [(w + g_step_size * dw, b + g_step_size * db)
+    return [(w - g_step_size * dw, b - g_step_size * db)
             for (w, b), (dw, db) in zip(g_params, g_grads)], g_loss_value, g_grads
 
 
@@ -229,9 +229,9 @@ def train_gan():
             fake_images = batched_gen_generate(g_params, noise)
 
             d_t_imgs = jnp.concatenate([real_images, fake_images])
-            d_t_lbls = jnp.concatenate([jnp.ones(len(real_images)), jnp.zeros(len(fake_images))])
+            d_t_lbls = jnp.concatenate([0.9 * jnp.ones(len(real_images)), jnp.zeros(len(fake_images))])
 
-            d_t_lbls = 0.9 * d_t_lbls
+            # d_t_lbls = 0.9 * d_t_lbls
             d_params, d_loss, d_grad = update_disc(d_params, d_t_imgs, d_t_lbls)
             # print(f'disc grad after update:{d_grad[0][0][0:3, 0:1]}')
             # print(f'disc loss:{d_loss}')
