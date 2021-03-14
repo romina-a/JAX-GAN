@@ -223,15 +223,15 @@ def update_gen(g_params, d_params, g_noise, g_lr):
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~ Train GAN ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def train_gan(
-        d_init_scale,
-        g_init_scale,
-        num_epochs,
-        d_layer_sizes,
-        g_layer_sizes,
-        batch_size,
-        d_lr,
-        g_lr,
-        digit,
+        d_init_scale=scale_default,
+        g_init_scale=scale_default,
+        num_epochs=num_epochs_default,
+        d_layer_sizes=d_layer_sizes_default,
+        g_layer_sizes=g_layer_sizes_default,
+        batch_size=batch_size_default,
+        d_lr=d_lr_default,
+        g_lr=g_lr_default,
+        digit=digit_default,
 ):
 
     training_generator = get_NumpyLoader(digit, batch_size)
@@ -245,6 +245,7 @@ def train_gan(
     d_loss_history = []
     g_loss_epoch = []
     d_loss_epoch = []
+    ims = []
     for epoch in range(num_epochs):
         start_time = time.time()
         for real_images, _ in training_generator:
@@ -281,7 +282,7 @@ def train_gan(
         g_loss_epoch = []
         d_loss_epoch = []
 
-        if epoch % 1 == 0:
+        if epoch % 10 == 0:
             key = random.PRNGKey(0)
             noise = random.normal(key, (1, dist_dim), dtype=jnp.float32)
 
@@ -289,11 +290,13 @@ def train_gan(
             plt.imshow(jnp.reshape(fake_image, (28, 28)))
             plt.show()
 
+
     print('ended')
     save_params(g_params, 'g_params')
     save_params(d_params, 'd_params')
     save_obj(g_loss_history, 'g_loss_history')
     save_obj(d_loss_history, 'd_loss_history')
+
 
 
 def load_generator_and_generate_im(n=1):
