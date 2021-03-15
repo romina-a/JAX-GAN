@@ -103,8 +103,8 @@ scale_default = 2e-2
 dist_dim_default = 100
 d_layer_sizes_default = (784, 512, 256, 1)
 g_layer_sizes_default = (dist_dim_default, 256, 512, 784)
-d_lr_default = 0.0002
-g_lr_default = 0.0002
+d_lr_default = 0.002
+g_lr_default = 0.002
 num_epochs_default = 100
 batch_size_default = 128
 digit_default = 0
@@ -232,6 +232,7 @@ def train_gan(
         d_lr=d_lr_default,
         g_lr=g_lr_default,
         digit=digit_default,
+        decrease_rate=0.9,
 ):
 
     training_generator = get_NumpyLoader(digit, batch_size)
@@ -245,7 +246,6 @@ def train_gan(
     d_loss_history = []
     g_loss_epoch = []
     d_loss_epoch = []
-    ims = []
     for epoch in range(num_epochs):
         start_time = time.time()
         for real_images, _ in training_generator:
@@ -283,6 +283,8 @@ def train_gan(
         d_loss_epoch = []
 
         if epoch % 10 == 0:
+            d_lr = decrease_rate*d_lr
+            g_lr = decrease_rate*g_lr
             key = random.PRNGKey(0)
             noise = random.normal(key, (1, dist_dim), dtype=jnp.float32)
 
