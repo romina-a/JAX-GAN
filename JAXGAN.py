@@ -5,63 +5,13 @@ from jax import random
 from functools import partial
 from jax.experimental import stax
 from jax.experimental import optimizers
+from dataset_loader import get_NumpyLoader
 
 import time
 import _pickle as pickle
 import argparse
 
 from matplotlib import pyplot as plt
-
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~ UTILS FOR LOADING MNIST WITH PYTORCH ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-from torch.utils import data
-from torchvision.datasets import MNIST
-
-
-def numpy_collate(batch):
-    if isinstance(batch[0], np.ndarray):
-        return np.stack(batch)
-    elif isinstance(batch[0], (tuple, list)):
-        transposed = zip(*batch)
-        return [numpy_collate(samples) for samples in transposed]
-    else:
-        return np.array(batch)
-
-
-class NumpyLoader(data.DataLoader):
-    def __init__(self, dataset, batch_size=1,
-                 shuffle=False, sampler=None,
-                 batch_sampler=None, num_workers=0,
-                 pin_memory=False, drop_last=False,
-                 timeout=0, worker_init_fn=None):
-        super(self.__class__, self).__init__(dataset,
-                                             batch_size=batch_size,
-                                             shuffle=shuffle,
-                                             sampler=sampler,
-                                             batch_sampler=batch_sampler,
-                                             num_workers=num_workers,
-                                             collate_fn=numpy_collate,
-                                             pin_memory=pin_memory,
-                                             drop_last=drop_last,
-                                             timeout=timeout,
-                                             worker_init_fn=worker_init_fn)
-
-
-class FlattenAndCast(object):
-    def __call__(self, pic):
-        return np.ravel(np.array(pic, dtype=jnp.float32))
-
-
-def get_NumpyLoader(digit, batch_size):
-    data_adr = ""
-    mnist_dataset = MNIST('./tmp/mnist/', download=True, transform=FlattenAndCast())
-    # load training with the generator (makes batch easier I think)
-    idx = mnist_dataset.targets == digit
-    mnist_dataset.data = mnist_dataset.data[idx]
-    mnist_dataset.targets = mnist_dataset.targets[idx]
-    training_generator = NumpyLoader(mnist_dataset, batch_size=batch_size, num_workers=0)
-    return training_generator
-
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Helper Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # def one_hot(x, k, dtype=jnp.float32):
@@ -101,12 +51,13 @@ def load_params(filename, adr='./'):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~ START OF GAN ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 scale_default = 2e-2
 dist_dim_default = 100
-d_layer_sizes_default = (784, 512, 256, 1)
-g_layer_sizes_default = (dist_dim_default, 256, 512, 784)
-d_lr_default = 0.002
-g_lr_default = 0.002
-num_epochs_default = 100
-batch_size_default = 128
+alpha = 4
+d_layer_sizes_default = (784*alpha, 512*alpha, 256*alpha, 1)
+g_layer_sizes_default = (dist_dim_default, 256*alpha, 512*alpha, 784*alpha)
+d_lr_default = 0.0002
+g_lr_default = 0.0002
+num_epochs_default = 1000
+batch_size_default = 512
 digit_default = 0
 
 
@@ -235,7 +186,7 @@ def train_gan(
         decrease_rate=0.9,
 ):
 
-    training_generator = get_NumpyLoader(digit, batch_size)
+    training_generator = get_NumpyLoader(batch_size, digit)
 
     dist_dim = g_layer_sizes[0]
     key = random.PRNGKey(0)
@@ -246,6 +197,10 @@ def train_gan(
     d_loss_history = []
     g_loss_epoch = []
     d_loss_epoch = []
+
+    g_step = 0
+    d_step = 0
+
     for epoch in range(num_epochs):
         start_time = time.time()
         for real_images, _ in training_generator:
@@ -298,7 +253,6 @@ def train_gan(
     save_params(d_params, 'd_params')
     save_obj(g_loss_history, 'g_loss_history')
     save_obj(d_loss_history, 'd_loss_history')
-
 
 
 def load_generator_and_generate_im(n=1):
