@@ -77,9 +77,9 @@ digit_default = 0
 
 def conv_generator():
     model = stax.serial(
-        Dense(1024 * 2 * 2),
-        Reshape((2, 2, 1024)),
-        ConvTranspose(out_chan=512, filter_shape=(5, 5), strides=(2, 2),
+        Dense(1024 * 7 * 7),
+        Reshape((7, 7, 1024)),
+        ConvTranspose(out_chan=512, filter_shape=(5, 5), strides=(1, 1),
                       padding='SAME', W_init=None, b_init=normal(1e-6)),
         BatchNorm(), Relu,
         ConvTranspose(out_chan=256, filter_shape=(5, 5), strides=(2, 2),
@@ -88,7 +88,7 @@ def conv_generator():
         ConvTranspose(out_chan=128, filter_shape=(5, 5), strides=(2, 2),
                       padding='SAME', W_init=None, b_init=normal(1e-6)),
         BatchNorm(), Relu,
-        ConvTranspose(out_chan=1, filter_shape=(5, 5), strides=(2, 2),
+        ConvTranspose(out_chan=1, filter_shape=(5, 5), strides=(1, 1),
                       padding='SAME', W_init=None, b_init=normal(1e-6)),
         BatchNorm(), Tanh,
     )
@@ -190,7 +190,7 @@ def train(batch_size, num_iter, digit):
 
                 z = jax.random.normal(jax.random.PRNGKey(0), (1, 100))
                 fake = g_apply(g_opt["get_params"](g_state), z)
-                fake = fake.reshape((32, 32))
+                fake = fake.reshape((28, 28))
                 plt.imshow((fake + 1.0) / 2.0, cmap='gray')
                 plt.show()
 

@@ -73,7 +73,7 @@ def get_NumpyLoader_cifar10(batch_size, digit=None):
     return training_generator
 
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~ UTILS FOR LOADING MNIST WITH TF ~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~ UTILS FOR LOADING DATA WITH TF ~~~~~~~~~~~~~~~~~
 import tensorflow_datasets as tfds
 import tensorflow as tf
 
