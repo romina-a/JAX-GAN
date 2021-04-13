@@ -123,6 +123,7 @@ d_opt = {'init': d_opt_init_fun, 'update': d_opt_update_fun, 'get_params': d_opt
 g_opt = {'init': g_opt_init_fun, 'update': g_opt_update_fun, 'get_params': g_opt_get_params}
 
 
+@partial(jit, static_argnums=(3,))
 def d_loss(d_params, g_params, prng_key, batch_size, real_ims):
     z = jax.random.normal(prng_key, (batch_size, 100))
     fake_ims = g_apply(g_params, z)
@@ -136,6 +137,7 @@ def d_loss(d_params, g_params, prng_key, batch_size, real_ims):
     return fake_loss + real_loss
 
 
+@partial(jit, static_argnums=(3,))
 def g_loss(g_params, d_params, prng_key, batch_size):
     z = jax.random.normal(prng_key, (batch_size, 100))
     fake_ims = g_apply(g_params, z)
@@ -193,11 +195,11 @@ def train(batch_size, num_iter, digit):
                 plt.show()
 
             prng, prng_to_use = jax.random.split(prng, 2)
-            d_state, g_state, d_loss, g_loss = train_step(i, prng_to_use, d_state, g_state, real_ims, batch_size)
-            d_losses.append(d_loss)
-            g_losses.append(g_loss)
+            d_state, g_state, d_loss_value, g_loss_value = train_step(i, prng_to_use, d_state, g_state, real_ims, batch_size)
+            d_losses.append(d_loss_value)
+            g_losses.append(g_loss_value)
             i = i + 1
-        print(f'finished, took{time.time()-start_time}')
+    print(f'finished, took{time.time()-start_time}')
 
     return d_losses, g_losses, d_state, g_state
 
