@@ -63,8 +63,10 @@ def LeakyRelu(negative_slope):
 
 d_lr_default = 0.0002
 d_momentum_default = 0.5
+d_momentum2_default = 0.5
 g_lr_default = 0.0002
 g_momentum_default = 0.5
+g_momentum2_default = 0.5
 loss_function_default = BCE_from_logits
 
 batch_size_default = 256
@@ -114,8 +116,8 @@ def conv_discriminator():
 d_init, d_apply = conv_discriminator()
 g_init, g_apply = conv_generator()
 
-(d_opt_init_fun, d_opt_update_fun, d_opt_get_params) = adam(d_lr_default, d_momentum_default)
-(g_opt_init_fun, g_opt_update_fun, g_opt_get_params) = adam(d_lr_default, d_momentum_default)
+(d_opt_init_fun, d_opt_update_fun, d_opt_get_params) = adam(d_lr_default, d_momentum_default, d_momentum2_default)
+(g_opt_init_fun, g_opt_update_fun, g_opt_get_params) = adam(g_lr_default, g_momentum_default, g_momentum2_default)
 d_opt = {'init': d_opt_init_fun, 'update': d_opt_update_fun, 'get_params': d_opt_get_params}
 g_opt = {'init': g_opt_init_fun, 'update': g_opt_update_fun, 'get_params': g_opt_get_params}
 
@@ -174,7 +176,6 @@ def train(batch_size, num_iter, digit):
     start_time = time.time()
     prev_time = time.time()
     for i, real_ims in enumerate(dataset):
-        print(i)
         if i >= num_iter:
             break
         if i % 100 == 0:
@@ -185,7 +186,7 @@ def train(batch_size, num_iter, digit):
             z = jax.random.normal(jax.random.PRNGKey(0), (1, 100))
             fake = g_apply(g_opt["get_params"](g_state), z)
             fake = fake.reshape((32, 32))
-            plt.imshow((fake + 1.0) / 2.0)
+            plt.imshow((fake + 1.0) / 2.0, cmap='gray')
             plt.show()
 
         prng, prng_to_use = jax.random.split(prng, 2)
@@ -195,7 +196,7 @@ def train(batch_size, num_iter, digit):
         d_losses.append(d_loss)
         g_losses.append(g_loss)
     print(f'finished, took{time.time()-start_time}')
-    return d_losses, g_losses
+    return d_losses, g_losses, d_state, g_state
 
 
 if __name__ == '__main__':
