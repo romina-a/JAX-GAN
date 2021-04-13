@@ -178,15 +178,15 @@ def train(batch_size, num_iter, digit):
     start_time = time.time()
     prev_time = time.time()
     i = 0
+    dataset = mnist_dataset(batch_size, digit=digit)
     while i < num_iter:
-        dataset = mnist_dataset(batch_size, digit=digit)
+        epoch_start_time = time.time()
         for real_ims, _ in dataset:
             if i >= num_iter:
                 break
             if i % 100 == 0:
-                curr_time = time.time()
-                print(f"{i}/{num_iter} took {curr_time-prev_time}")
-                prev_time = curr_time
+                print(f"{i}/{num_iter} took {time.time()-prev_time}")
+                prev_time = time.time()
 
                 z = jax.random.normal(jax.random.PRNGKey(0), (1, 100))
                 fake = g_apply(g_opt["get_params"](g_state), z)
@@ -199,6 +199,7 @@ def train(batch_size, num_iter, digit):
             d_losses.append(d_loss_value)
             g_losses.append(g_loss_value)
             i = i + 1
+        print(f'epoch finished in {time.time()-epoch_start_time}')
     print(f'finished, took{time.time()-start_time}')
 
     return d_losses, g_losses, d_state, g_state
