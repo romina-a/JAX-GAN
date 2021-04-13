@@ -117,7 +117,7 @@ def conv_discriminator():
     return model
 
 
-@partial(jit, static_argnums=(3,))
+@partial(jit, static_argnums=(5,))
 def d_loss(d_params, g_params, d_apply, g_apply, prng_key, batch_size, real_ims):
     z = jax.random.normal(prng_key, (batch_size, 100))
     fake_ims = g_apply(g_params, z)
@@ -131,7 +131,7 @@ def d_loss(d_params, g_params, d_apply, g_apply, prng_key, batch_size, real_ims)
     return fake_loss + real_loss
 
 
-@partial(jit, static_argnums=(3,))
+@partial(jit, static_argnums=(5,))
 def g_loss(g_params, d_params, g_apply, d_apply, prng_key, batch_size):
     z = jax.random.normal(prng_key, (batch_size, 100))
     fake_ims = g_apply(g_params, z)
@@ -143,7 +143,7 @@ def g_loss(g_params, d_params, g_apply, d_apply, prng_key, batch_size):
     return loss
 
 
-@partial(jit, static_argnums=(7,))
+@partial(jit, static_argnums=(9,))
 def train_step(i, prng_key, d_state, g_state, d_opt, g_opt, d_apply, g_apply, real_ims, batch_size):
     prng1, prng2 = jax.random.split(prng_key, 2)
     d_params = d_opt['get_params'](d_state)
