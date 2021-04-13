@@ -158,7 +158,7 @@ def train_step(i, prng_key, d_state, g_state, real_ims, batch_size):
     g_loss_value, g_grads = value_and_grad(g_loss)(g_params, d_params, prng2, batch_size)
     g_state = g_opt['update'](i, g_grads, g_state)
 
-    return d_state, g_state, d_loss, g_loss
+    return d_state, g_state, d_loss_value, g_loss_value
 
 
 def train(batch_size, num_iter, digit):
