@@ -18,7 +18,7 @@ def numpy_collate(batch):
 
 class NumpyLoader(data.DataLoader):
     def __init__(self, dataset, batch_size=1,
-                 shuffle=True, sampler=None,
+                 shuffle=False, sampler=None,
                  batch_sampler=None, num_workers=0,
                  pin_memory=False, drop_last=False,
                  timeout=0, worker_init_fn=None):
