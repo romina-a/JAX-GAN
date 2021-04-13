@@ -3,8 +3,7 @@ import jax.numpy as jnp
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~ UTILS FOR LOADING MNIST WITH PYTORCH ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 from torch.utils import data
-from torchvision.datasets import MNIST
-from torchvision.datasets import CIFAR10
+from torchvision.datasets import MNIST, CIFAR10
 
 
 def numpy_collate(batch):
@@ -36,20 +35,41 @@ class NumpyLoader(data.DataLoader):
                                              worker_init_fn=worker_init_fn)
 
 
-class FlattenAndCast(object):
-    def __call__(self, pic):
-        return np.ravel(np.array(pic, dtype=jnp.float32))
+def flatten_and_cast(pic):
+    return np.ravel(np.array(pic, dtype=jnp.float32))
 
 
-def get_NumpyLoader_mnist(batch_size, digit=None):
+def cast(pic):
+    pic = (np.array(pic, dtype=jnp.float32)-127.5)/127.5
+    if len(pic.shape) == 2:
+        pic = pic[..., np.newaxis]
+    return pic
+
+
+def get_NumpyLoader_mnist(batch_size, digit=None, flatten=False):
     data_adr = ""
-    mnist_dataset = MNIST('./tmp/mnist/', download=True, transform=FlattenAndCast())
-    # load training with the generator (makes batch easier I think)
+    if flatten:
+        mnist_dataset = MNIST('./tmp/mnist/', download=True, transform=flatten_and_cast)
+    else:
+        mnist_dataset = MNIST('./tmp/mnist/', download=True, transform=cast)
     if digit is not None:
         idx = mnist_dataset.targets == digit
         mnist_dataset.data = mnist_dataset.data[idx]
         mnist_dataset.targets = mnist_dataset.targets[idx]
+    # load training with the generator (makes batch easier I think)
     training_generator = NumpyLoader(mnist_dataset, batch_size=batch_size, num_workers=0)
+    return training_generator
+
+
+def get_NumpyLoader_cifar10(batch_size, digit=None):
+    data_adr = ""
+    cifar10_dataset = CIFAR10('./tmp/cifar10/', download=True, transform=cast)
+    if digit is not None:
+        idx = np.array(cifar10_dataset.targets) == digit
+        cifar10_dataset.data = cifar10_dataset.data[idx]
+        cifar10_dataset.targets = np.array(cifar10_dataset.targets)[idx]
+    # load training with the generator (makes batch easier I think)
+    training_generator = NumpyLoader(cifar10_dataset, batch_size=batch_size, num_workers=0)
     return training_generator
 
 

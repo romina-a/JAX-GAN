@@ -158,20 +158,6 @@ def update_gen(g_params, d_params, g_noise, g_lr):
             for (w, b), (dw, db) in zip(g_params, g_grads)], g_loss_value, g_grads
 
 
-# ~~~~~~~~~~~~~~~~~~~~~~~ Data Loader, I don't understand exactly ~~~~~~~~~~~~~~~~~~~~
-# data_adr = ""
-# mnist_dataset = MNIST('./tmp/mnist/', download=True, transform=FlattenAndCast())
-# # load training with the generator (makes batch easier I think)
-# training_generator = NumpyLoader(mnist_dataset, batch_size=batch_size, num_workers=0)
-
-
-# Get full test dataset
-# mnist_dataset_test = MNIST('./tmp/mnist/', download=True, train=False)
-# test_images = jnp.array(mnist_dataset_test.test_data.numpy().reshape(len(mnist_dataset_test.test_data), -1),
-#                         dtype=jnp.float32)
-# test_labels = one_hot(np.array(mnist_dataset_test.test_labels), n_targets)
-
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~ Train GAN ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def train_gan(
         d_init_scale=scale_default,

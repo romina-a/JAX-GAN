@@ -10,12 +10,13 @@ from jax import value_and_grad, jit
 
 import jax.numpy as jnp
 
-from dataset_loader import make_mnist_dataset
+from dataset_loader import get_NumpyLoader_mnist as mnist_dataset
 
 import matplotlib.pyplot as plt
 
 import argparse
 import time
+from functools import partial
 
 # ~~~~~~~~~~~~ helper functions ~~~~~~~~~~~~~~~~~~~~~~~~
 def print_param_dims(params):
@@ -146,7 +147,7 @@ def g_loss(g_params, d_params, prng_key, batch_size):
     return loss
 
 
-# @jit
+@partial(jit, static_argnums=(5,))
 def train_step(i, prng_key, d_state, g_state, real_ims, batch_size):
     prng1, prng2 = jax.random.split(prng_key, 2)
     d_params = d_opt['get_params'](d_state)
@@ -172,30 +173,32 @@ def train(batch_size, num_iter, digit):
     d_losses = []
     g_losses = []
 
-    dataset = make_mnist_dataset(batch_size, seed=1, digit=digit)
     start_time = time.time()
     prev_time = time.time()
-    for i, real_ims in enumerate(dataset):
-        if i >= num_iter:
-            break
-        if i % 100 == 0:
-            curr_time = time.time()
-            print(f"{i}/{num_iter} took {curr_time-prev_time}")
-            prev_time = curr_time
+    i = 0
+    while i < num_iter:
+        dataset = mnist_dataset(batch_size, digit=digit)
+        for real_ims, _ in dataset:
+            if i >= num_iter:
+                break
+            if i % 100 == 0:
+                curr_time = time.time()
+                print(f"{i}/{num_iter} took {curr_time-prev_time}")
+                prev_time = curr_time
 
-            z = jax.random.normal(jax.random.PRNGKey(0), (1, 100))
-            fake = g_apply(g_opt["get_params"](g_state), z)
-            fake = fake.reshape((32, 32))
-            plt.imshow((fake + 1.0) / 2.0, cmap='gray')
-            plt.show()
+                z = jax.random.normal(jax.random.PRNGKey(0), (1, 100))
+                fake = g_apply(g_opt["get_params"](g_state), z)
+                fake = fake.reshape((32, 32))
+                plt.imshow((fake + 1.0) / 2.0, cmap='gray')
+                plt.show()
 
-        prng, prng_to_use = jax.random.split(prng, 2)
-        d_state, g_state, d_loss, g_loss = train_step(
-            i=i, prng_key=prng_to_use, d_state=d_state, g_state=g_state,
-            real_ims=real_ims, batch_size=batch_size)
-        d_losses.append(d_loss)
-        g_losses.append(g_loss)
-    print(f'finished, took{time.time()-start_time}')
+            prng, prng_to_use = jax.random.split(prng, 2)
+            d_state, g_state, d_loss, g_loss = train_step(i, prng_to_use, d_state, g_state, real_ims, batch_size)
+            d_losses.append(d_loss)
+            g_losses.append(g_loss)
+            i = i + 1
+        print(f'finished, took{time.time()-start_time}')
+
     return d_losses, g_losses, d_state, g_state
 
 
