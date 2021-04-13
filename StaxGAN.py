@@ -15,6 +15,7 @@ from dataset_loader import make_mnist_dataset
 import matplotlib.pyplot as plt
 
 import argparse
+import time
 
 # ~~~~~~~~~~~~ helper functions ~~~~~~~~~~~~~~~~~~~~~~~~
 def print_param_dims(params):
@@ -158,7 +159,7 @@ def train_step(i, prng_key, d_state, g_state, real_ims, batch_size):
     return d_state, g_state, d_loss, g_loss
 
 
-def train(batch_size, num_iter):
+def train(batch_size, num_iter, digit):
     prng_key = jax.random.PRNGKey(0)
     prng1, prng2, prng = jax.random.split(prng_key, 3)
     d_output_shape, d_params = d_init(prng1, (batch_size, 32, 32, 1))
@@ -169,27 +170,28 @@ def train(batch_size, num_iter):
     d_losses = []
     g_losses = []
 
-    dataset = make_mnist_dataset(batch_size, 1, 1)
+    dataset = make_mnist_dataset(batch_size, seed=1, digit=digit)
     for step, real_ims in enumerate(dataset):
+        start_time = time.time()
         print(step)
         if step >= num_iter:
             break
-        if step % 5 == 0:
+        if step % 100 == 0:
+            print(f"steps 1 to {step}/{num_iter} took{time.time-start_time}")
             z = jax.random.normal(jax.random.PRNGKey(0), (1, 100))
             fake = g_apply(g_opt["get_params"](g_state), z)
             fake = fake.reshape((32, 32))
             plt.imshow((fake + 1.0) / 2.0)
             plt.show()
-        print(1)
+
         prng, prng_to_use = jax.random.split(prng, 2)
-        print(2)
         d_state, g_state, d_loss, g_loss = train_step(
             i=step, prng_key=prng_to_use, d_state=d_state, g_state=g_state,
             real_ims=real_ims, batch_size=batch_size)
-        print(3)
         d_losses.append(d_loss)
         g_losses.append(g_loss)
-        print(4)
+    print("finished")
+    return d_losses, g_losses
 
 
 if __name__ == '__main__':
@@ -197,11 +199,14 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", required=False, default=batch_size_default, type=int,
                         help="training batch size")
     parser.add_argument("--num_iter", required=False, default=num_iter_default, type=int,
+                        help="number of iterations")
+    parser.add_argument("--digit", required=False, default=digit_default, type=int,
                         help="digit")
     args = vars(parser.parse_args())
     train(
         batch_size=args['batch_size'],
-        num_iter=num_iter_default
+        num_iter=args['num_iter'],
+        digit=args['digit']
     )
 
 
