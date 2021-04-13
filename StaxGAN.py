@@ -178,8 +178,9 @@ def train(batch_size, num_iter, digit):
         if step >= num_iter:
             break
         if step % 100 == 0:
-            print(f"{step}/{num_iter} took {(time.time())-prev_time}")
-            prev_time = time.time()
+            curr_time = time.time()
+            print(f"{step}/{num_iter} took {curr_time-prev_time}")
+            prev_time = curr_time
 
             z = jax.random.normal(jax.random.PRNGKey(0), (1, 100))
             fake = g_apply(g_opt["get_params"](g_state), z)
