@@ -178,7 +178,7 @@ def train(batch_size, num_iter, digit):
         if step >= num_iter:
             break
         if step % 100 == 0:
-            print(f"{step}/{num_iter} took {time.time()-prev_time}")
+            print(f"{step}/{num_iter} took {(time.time())-prev_time}")
             prev_time = time.time()
 
             z = jax.random.normal(jax.random.PRNGKey(0), (1, 100))
