@@ -171,13 +171,16 @@ def train(batch_size, num_iter, digit):
     g_losses = []
 
     dataset = make_mnist_dataset(batch_size, seed=1, digit=digit)
+    start_time = time.time()
+    prev_time = time.time()
     for step, real_ims in enumerate(dataset):
-        start_time = time.time()
         print(step)
         if step >= num_iter:
             break
         if step % 100 == 0:
-            print(f"steps 1 to {step}/{num_iter} took{time.time-start_time}")
+            print(f"{step}/{num_iter} took {time.time()-prev_time}")
+            prev_time = time.time()
+
             z = jax.random.normal(jax.random.PRNGKey(0), (1, 100))
             fake = g_apply(g_opt["get_params"](g_state), z)
             fake = fake.reshape((32, 32))
@@ -190,7 +193,7 @@ def train(batch_size, num_iter, digit):
             real_ims=real_ims, batch_size=batch_size)
         d_losses.append(d_loss)
         g_losses.append(g_loss)
-    print("finished")
+    print(f'finished, took{time.time()-start_time}')
     return d_losses, g_losses
 
 
