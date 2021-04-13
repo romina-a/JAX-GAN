@@ -71,7 +71,8 @@ def make_mnist_dataset(batch_size, seed=1, digit=None):
         ds = ds.filter(lambda fd: fd['label'] == digit)
     ds = ds.map(map_func=_preprocess,
                 num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    ds = ds.shuffle(10 * batch_size, seed=seed).repeat().batch(batch_size)
+    # ds = ds.shuffle(10 * batch_size, seed=seed).repeat().batch(batch_size)
+    ds = ds.repeat().batch(batch_size)
     return iter(tfds.as_numpy(ds))
 
 
