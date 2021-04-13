@@ -41,7 +41,7 @@ class FlattenAndCast(object):
         return np.ravel(np.array(pic, dtype=jnp.float32))
 
 
-def get_NumpyLoader(batch_size, digit=None):
+def get_NumpyLoader_mnist(batch_size, digit=None):
     data_adr = ""
     mnist_dataset = MNIST('./tmp/mnist/', download=True, transform=FlattenAndCast())
     # load training with the generator (makes batch easier I think)

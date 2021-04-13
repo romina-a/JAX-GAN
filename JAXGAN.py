@@ -5,7 +5,7 @@ from jax import random
 from functools import partial
 from jax.experimental import stax
 from jax.experimental import optimizers
-from dataset_loader import get_NumpyLoader
+from dataset_loader import get_NumpyLoader_mnist
 
 import time
 import _pickle as pickle
@@ -186,7 +186,7 @@ def train_gan(
         decrease_rate=0.9,
 ):
 
-    training_generator = get_NumpyLoader(batch_size, digit)
+    training_generator = get_NumpyLoader_mnist(batch_size, digit)
 
     dist_dim = g_layer_sizes[0]
     key = random.PRNGKey(0)

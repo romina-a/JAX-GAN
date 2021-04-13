@@ -177,8 +177,8 @@ def train(batch_size, num_iter):
         if step % 5 == 0:
             z = jax.random.normal(jax.random.PRNGKey(0), (1, 100))
             fake = g_apply(g_opt["get_params"](g_state), z)
-            fake = fake.reshape((32, 32, 1))
-            plt.imshow((fake + 1.0) / 2.0, cmap='Greys_r')
+            fake = fake.reshape((32, 32))
+            plt.imshow((fake + 1.0) / 2.0)
             plt.show()
         print(1)
         prng, prng_to_use = jax.random.split(prng, 2)
