@@ -173,13 +173,13 @@ def train(batch_size, num_iter, digit):
     dataset = make_mnist_dataset(batch_size, seed=1, digit=digit)
     start_time = time.time()
     prev_time = time.time()
-    for step, real_ims in enumerate(dataset):
-        print(step)
-        if step >= num_iter:
+    for i, real_ims in enumerate(dataset):
+        print(i)
+        if i >= num_iter:
             break
-        if step % 100 == 0:
+        if i % 100 == 0:
             curr_time = time.time()
-            print(f"{step}/{num_iter} took {curr_time-prev_time}")
+            print(f"{i}/{num_iter} took {curr_time-prev_time}")
             prev_time = curr_time
 
             z = jax.random.normal(jax.random.PRNGKey(0), (1, 100))
@@ -190,7 +190,7 @@ def train(batch_size, num_iter, digit):
 
         prng, prng_to_use = jax.random.split(prng, 2)
         d_state, g_state, d_loss, g_loss = train_step(
-            i=step, prng_key=prng_to_use, d_state=d_state, g_state=g_state,
+            i=i, prng_key=prng_to_use, d_state=d_state, g_state=g_state,
             real_ims=real_ims, batch_size=batch_size)
         d_losses.append(d_loss)
         g_losses.append(g_loss)
