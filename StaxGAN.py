@@ -77,6 +77,16 @@ def initialize(dataset,
     globals()['g_opt'] = {'init': g_opt_init_fun, 'update': g_opt_update_fun, 'get_params': g_opt_get_params}
 
 
+def plot_sample_output(g_state, n=1):
+    z = jax.random.normal(jax.random.PRNGKey(0), (n, 100))
+    fakes = g_apply(g_opt["get_params"](g_state), z)
+    for im in fakes:
+        if im.shape[2] == 1:
+            im = im.reshape(im.shape[:2])
+        plt.imshow((im + 1.0) / 2.0)
+        plt.show()
+
+
 @partial(jit, static_argnums=(3,))
 def d_loss(d_params, g_params, prng_key, batch_size, real_ims):
     z = jax.random.normal(prng_key, (batch_size, 100))
@@ -119,18 +129,22 @@ def train_step(i, prng_key, d_state, g_state, real_ims, batch_size):
 
 
 def train(batch_size, num_iter, digit,
-          dataset=dataset_default,
+          real_data=dataset_default,
           d_lr=d_lr_default, d_momentum=d_momentum_default, d_momentum2=d_momentum2_default,
           g_lr=g_lr_default, g_momentum=g_momentum_default, g_momentum2=g_momentum2_default,
           ):
     initialize(
-        dataset=dataset,
+        dataset=real_data,
         d_lr=d_lr, d_momentum=d_momentum, d_momentum2=d_momentum2,
         g_lr=g_lr, g_momentum=g_momentum, g_momentum2=g_momentum2,
     )
+    real_data = dataset_loader(batch_size, digit=digit)
+    samples, sample_labels = next(iter(real_data))
+    im_shape = samples[0].shape
+
     prng_key = jax.random.PRNGKey(0)
     prng1, prng2, prng = jax.random.split(prng_key, 3)
-    d_output_shape, d_params = d_init(prng1, (batch_size, 32, 32, 1))
+    d_output_shape, d_params = d_init(prng1, (batch_size, *im_shape))
     g_output_shape, g_params = g_init(prng2, (batch_size, 100))
     d_state = d_opt['init'](d_params)
     g_state = g_opt['init'](g_params)
@@ -141,21 +155,16 @@ def train(batch_size, num_iter, digit,
     start_time = time.time()
     prev_time = time.time()
     i = 0
-    dataset = dataset_loader(batch_size, digit=digit)
+
     while i < num_iter:
         epoch_start_time = time.time()
-        for real_ims, _ in dataset:
+        for real_ims, _ in real_data:
             if i >= num_iter:
                 break
             if i % 100 == 0:
                 print(f"{i}/{num_iter} took {time.time() - prev_time}")
                 prev_time = time.time()
-
-                z = jax.random.normal(jax.random.PRNGKey(0), (1, 100))
-                fake = g_apply(g_opt["get_params"](g_state), z)
-                fake = fake.reshape((28, 28))
-                plt.imshow((fake + 1.0) / 2.0, cmap='gray')
-                plt.show()
+                plot_sample_output(g_state)
 
             prng, prng_to_use = jax.random.split(prng, 2)
             d_state, g_state, d_loss_value, g_loss_value = train_step(i, prng_to_use, d_state, g_state, real_ims,
@@ -197,7 +206,8 @@ if __name__ == '__main__':
         batch_size=args['batch_size'],
         num_iter=args['num_iter'],
         digit=args['digit'],
-        dataset=args['dataset'],
+        # dataset=args['dataset'],
+        real_data='cifar10',
         d_lr=args['d_lr'], d_momentum=args['d_momentum'], d_momentum2=args['d_momentum2'],
         g_lr=args['g_lr'], g_momentum=args['g_momentum'], g_momentum2=args['g_momentum2'],
     )
