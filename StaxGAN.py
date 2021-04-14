@@ -71,7 +71,7 @@ g_momentum_default = 0.5
 g_momentum2_default = 0.5
 loss_function_default = BCE_from_logits
 
-batch_size_default = 256
+batch_size_default = 128
 num_iter_default = 2000
 digit_default = 0
 
@@ -82,16 +82,16 @@ def conv_generator():
         Reshape((7, 7, 1024)),
         ConvTranspose(out_chan=512, filter_shape=(5, 5), strides=(1, 1),
                       padding='SAME', W_init=None, b_init=normal(1e-6)),
-        BatchNorm(), Relu,
+        Relu, BatchNorm(),
         ConvTranspose(out_chan=256, filter_shape=(5, 5), strides=(2, 2),
                       padding='SAME', W_init=None, b_init=normal(1e-6)),
-        BatchNorm(), Relu,
+        Relu, BatchNorm(),
         ConvTranspose(out_chan=128, filter_shape=(5, 5), strides=(2, 2),
                       padding='SAME', W_init=None, b_init=normal(1e-6)),
-        BatchNorm(), Relu,
+        Relu, BatchNorm(),
         ConvTranspose(out_chan=1, filter_shape=(5, 5), strides=(1, 1),
                       padding='SAME', W_init=None, b_init=normal(1e-6)),
-        BatchNorm(), Tanh,
+        Tanh,
     )
     return model
 
@@ -100,16 +100,16 @@ def conv_discriminator():
     model = stax.serial(
         Conv(out_chan=64, filter_shape=(5, 5), strides=(2, 2),
              padding='SAME', W_init=None, b_init=normal(1e-6)),
-        BatchNorm(), LeakyRelu(negative_slope=0.2),
+        LeakyRelu(negative_slope=0.2),
         Conv(out_chan=128, filter_shape=(5, 5), strides=(2, 2),
              padding='SAME', W_init=None, b_init=normal(1e-6)),
-        BatchNorm(), LeakyRelu(negative_slope=0.2),
+        LeakyRelu(negative_slope=0.2), BatchNorm(),
         Conv(out_chan=256, filter_shape=(5, 5), strides=(2, 2),
              padding='SAME', W_init=None, b_init=normal(1e-6)),
-        BatchNorm(), LeakyRelu(negative_slope=0.2),
+        LeakyRelu(negative_slope=0.2), BatchNorm(),
         Conv(out_chan=512, filter_shape=(5, 5), strides=(2, 2),
              padding='SAME', W_init=None, b_init=normal(1e-6)),
-        BatchNorm(), Flatten,
+        LeakyRelu(negative_slope=0.2), BatchNorm(), Flatten,
         Dense(1)
     )
     return model
@@ -166,7 +166,6 @@ def train_step(i, prng_key, d_state, g_state, real_ims, batch_size):
 
 
 def train(batch_size, num_iter, digit):
-
     prng_key = jax.random.PRNGKey(0)
     prng1, prng2, prng = jax.random.split(prng_key, 3)
     d_output_shape, d_params = d_init(prng1, (batch_size, 32, 32, 1))
