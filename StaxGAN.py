@@ -7,8 +7,9 @@ import argparse
 import time
 from functools import partial
 
-from Models import conv_generator, conv_discriminator
+from Models import conv_generator_mnist, conv_discriminator
 from dataset_loader import get_NumpyLoader_mnist as mnist_dataset
+
 
 # ~~~~~~~~~~~~ helper functions ~~~~~~~~~~~~~~~~~~~~~~~~
 def print_param_dims(params):
@@ -48,7 +49,7 @@ digit_default = 0
 
 
 d_init, d_apply = conv_discriminator()
-g_init, g_apply = conv_generator()
+g_init, g_apply = conv_generator_mnist()
 
 (d_opt_init_fun, d_opt_update_fun, d_opt_get_params) = adam(d_lr_default, d_momentum_default, d_momentum2_default)
 (g_opt_init_fun, g_opt_update_fun, g_opt_get_params) = adam(g_lr_default, g_momentum_default, g_momentum2_default)

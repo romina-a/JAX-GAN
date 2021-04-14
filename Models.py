@@ -27,7 +27,7 @@ def LeakyRelu(negative_slope):
 
 
 # -----------------------------------   Models   ------------------------------------
-def conv_generator():
+def conv_generator_mnist():
     model = stax.serial(
         Dense(1024 * 7 * 7),
         Reshape((7, 7, 1024)),
@@ -41,6 +41,26 @@ def conv_generator():
                       padding='SAME', W_init=None, b_init=normal(1e-6)),
         Relu, BatchNorm(),
         ConvTranspose(out_chan=1, filter_shape=(5, 5), strides=(1, 1),
+                      padding='SAME', W_init=None, b_init=normal(1e-6)),
+        Tanh,
+    )
+    return model
+
+
+def conv_generator_cifar10():
+    model = stax.serial(
+        Dense(1024 * 2 * 2),
+        Reshape((2, 2, 1024)),
+        ConvTranspose(out_chan=512, filter_shape=(5, 5), strides=(2, 2),
+                      padding='SAME', W_init=None, b_init=normal(1e-6)),
+        Relu, BatchNorm(),
+        ConvTranspose(out_chan=256, filter_shape=(5, 5), strides=(2, 2),
+                      padding='SAME', W_init=None, b_init=normal(1e-6)),
+        Relu, BatchNorm(),
+        ConvTranspose(out_chan=128, filter_shape=(5, 5), strides=(2, 2),
+                      padding='SAME', W_init=None, b_init=normal(1e-6)),
+        Relu, BatchNorm(),
+        ConvTranspose(out_chan=3, filter_shape=(5, 5), strides=(2, 2),
                       padding='SAME', W_init=None, b_init=normal(1e-6)),
         Tanh,
     )
