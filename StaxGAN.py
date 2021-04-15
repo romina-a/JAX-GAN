@@ -129,12 +129,12 @@ def train_step(i, prng_key, d_state, g_state, real_ims, batch_size):
 
 
 def train(batch_size, num_iter, digit,
-          real_data=dataset_default,
+          dataset=dataset_default,
           d_lr=d_lr_default, d_momentum=d_momentum_default, d_momentum2=d_momentum2_default,
           g_lr=g_lr_default, g_momentum=g_momentum_default, g_momentum2=g_momentum2_default,
           ):
     initialize(
-        dataset=real_data,
+        dataset=dataset,
         d_lr=d_lr, d_momentum=d_momentum, d_momentum2=d_momentum2,
         g_lr=g_lr, g_momentum=g_momentum, g_momentum2=g_momentum2,
     )
@@ -206,8 +206,7 @@ if __name__ == '__main__':
         batch_size=args['batch_size'],
         num_iter=args['num_iter'],
         digit=args['digit'],
-        # dataset=args['dataset'],
-        real_data='cifar10',
+        dataset=args['dataset'],
         d_lr=args['d_lr'], d_momentum=args['d_momentum'], d_momentum2=args['d_momentum2'],
         g_lr=args['g_lr'], g_momentum=args['g_momentum'], g_momentum2=args['g_momentum2'],
     )
