@@ -115,13 +115,13 @@ def conv_discriminator():
 def mlp_discriminator():
     model = stax.serial(
         Dense(out_dim=256), LeakyRelu(negative_slope=0.2),
-        # BatchNorm(axis=(1,)),
+        BatchNorm(axis=(1,)),
         Dense(out_dim=256), LeakyRelu(negative_slope=0.2),
-        # BatchNorm(axis=(1,)),
+        BatchNorm(axis=(1,)),
         Dense(out_dim=256), LeakyRelu(negative_slope=0.2),
-        # BatchNorm(axis=(1,)),
+        BatchNorm(axis=(1,)),
         Dense(out_dim=256), LeakyRelu(negative_slope=0.2),
-        # BatchNorm(axis=(1,)),
+        BatchNorm(axis=(1,)),
         Dense(1)
     )
     return model
@@ -130,13 +130,13 @@ def mlp_discriminator():
 def mlp_generator_2d():
     model = stax.serial(
         Dense(out_dim=256), Relu,
-        # BatchNorm(axis=(1,)),
+        BatchNorm(axis=(1,)),
         Dense(out_dim=256), Relu,
-        # BatchNorm(axis=(1,)),
+        BatchNorm(axis=(1,)),
         Dense(out_dim=256), Relu,
-        # BatchNorm(axis=(1,)),
+        BatchNorm(axis=(1,)),
         Dense(out_dim=256), Relu,
-        # BatchNorm(axis=(1,)),
+        BatchNorm(axis=(1,)),
         Dense(2)
     )
     return model
