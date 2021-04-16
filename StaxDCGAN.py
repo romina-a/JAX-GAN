@@ -1,13 +1,12 @@
 import jax
 import jax.numpy as jnp
 from jax.experimental.optimizers import adam
-from jax import value_and_grad, jit
+
 import matplotlib.pyplot as plt
 import argparse
 import time
-from functools import partial
 
-from Models import conv_generator_mnist, conv_generator_cifar10, conv_discriminator
+from Models import conv_generator_mnist, conv_generator_cifar10, conv_discriminator, GAN
 from Models import BCE_from_logits
 from dataset_loader import get_NumpyLoader_mnist as mnist_dataset
 from dataset_loader import get_NumpyLoader_cifar10 as cifar10_dataset
@@ -29,71 +28,6 @@ loss_function_default = BCE_from_logits
 
 dataset_loaders = {'mnist': mnist_dataset, 'cifar10': cifar10_dataset}
 generators = {'mnist': conv_generator_mnist, 'cifar10': conv_generator_cifar10}
-
-
-class GAN:
-    def __init__(self, d, g, d_opt, g_opt, loss_function):
-        self.d = {'init': d['init'], 'apply': d['apply']}
-        self.g = {'init': g['init'], 'apply': g['apply']}
-        self.d_opt = {'init': d_opt['init'], 'update': d_opt['update'], 'get_params': d_opt['get_params']}
-        self.g_opt = {'init': g_opt['init'], 'update': g_opt['update'], 'get_params': g_opt['get_params']}
-        self.loss_function = loss_function
-        self.d_output_shape = None
-        self.g_output_shape = None
-        self.d_input_shape = None
-        self.g_input_shape = None
-
-    def init(self, prng_d, prng_g, d_input_shape, g_input_shape):
-        self.g_input_shape = g_input_shape
-        self.d_input_shape = d_input_shape
-        self.d_output_shape, d_params = self.d['init'](prng_d, (1, *d_input_shape))
-        self.g_output_shape, g_params = self.g['init'](prng_g, (1, *g_input_shape))
-        d_state = self.d_opt['init'](d_params)
-        g_state = self.g_opt['init'](g_params)
-        return d_state, g_state
-
-    @partial(jit, static_argnums=(0, 4,))
-    def d_loss(self, d_params, g_params, prng_key, batch_size, real_ims):
-        z = jax.random.normal(prng_key, (batch_size, *self.g_input_shape))
-        fake_ims = self.g['apply'](g_params, z)
-
-        fake_predictions = self.d['apply'](d_params, fake_ims)
-        real_predictions = self.d['apply'](d_params, real_ims)
-
-        fake_loss = self.loss_function(fake_predictions, jnp.zeros(batch_size))
-        real_loss = self.loss_function(real_predictions, jnp.ones(batch_size))
-
-        return fake_loss + real_loss
-
-    @partial(jit, static_argnums=(0, 4,))
-    def g_loss(self, g_params, d_params, prng_key, batch_size):
-        z = jax.random.normal(prng_key, (batch_size, *self.g_input_shape))
-        fake_ims = self.g['apply'](g_params, z)
-
-        fake_predictions = self.d['apply'](d_params, fake_ims)
-
-        loss = self.loss_function(fake_predictions, jnp.ones(batch_size))
-
-        return loss
-
-    @partial(jit, static_argnums=(0, 6,))
-    def train_step(self, i, prng_key, d_state, g_state, real_ims, batch_size):
-        prng1, prng2 = jax.random.split(prng_key, 2)
-        d_params = self.d_opt['get_params'](d_state)
-        g_params = self.g_opt['get_params'](g_state)
-
-        d_loss_value, d_grads = value_and_grad(self.d_loss)(d_params, g_params, prng1, batch_size, real_ims)
-        d_state = self.d_opt['update'](i, d_grads, d_state)
-
-        g_loss_value, g_grads = value_and_grad(self.g_loss)(g_params, d_params, prng2, batch_size)
-        g_state = self.g_opt['update'](i, g_grads, g_state)
-
-        return d_state, g_state, d_loss_value, g_loss_value
-
-    @partial(jit, static_argnums=(0,))
-    def get_images(self, z, g_state):
-        fakes = self.g['apply'](self.g_opt['get_params'](g_state), z)
-        return fakes
 
 
 def plot_samples(ims):
@@ -157,7 +91,7 @@ def train(batch_size, num_iter, digit, dataset=dataset_default, loss_function=lo
             if i % 100 == 0:
                 print(f"{i}/{num_iter} took {time.time() - prev_time}")
                 prev_time = time.time()
-                plot_samples(gan.get_images(z, g_state))
+                plot_samples(gan.generate_samples(z, g_state))
 
             prng, prng_to_use = jax.random.split(prng, 2)
             d_state, g_state, d_loss_value, g_loss_value = gan.train_step(i, prng_to_use, d_state, g_state, real_ims,
@@ -168,7 +102,7 @@ def train(batch_size, num_iter, digit, dataset=dataset_default, loss_function=lo
         print(f'epoch finished in {time.time() - epoch_start_time}')
     print(f'finished, took{time.time() - start_time}')
 
-    return d_losses, g_losses, d_state, g_state
+    return d_losses, g_losses, d_state, g_state, gan
 
 
 if __name__ == '__main__':
