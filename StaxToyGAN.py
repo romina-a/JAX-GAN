@@ -31,7 +31,7 @@ num_iter_default = 100000
 
 
 def get_dataset(prng_key, batch_size, num_components):
-    return GaussianMixture(prng_key, batch_size, num_modes=num_components, variance=0.005)
+    return GaussianMixture(prng_key, batch_size, num_modes=num_components, variance=0.0025)
 
 
 def create_and_initialize_gan(prng, d_lr, d_momentum, d_momentum2, g_lr, g_momentum, g_momentum2, loss_function,
