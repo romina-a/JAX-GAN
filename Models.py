@@ -1,4 +1,4 @@
-from jax.nn.initializers import glorot_normal, normal, ones, zeros
+from jax.nn.initializers import normal
 from jax.nn import leaky_relu
 from jax.experimental import stax
 from jax.experimental.stax import (BatchNorm, Conv, ConvTranspose, Dense,
@@ -144,7 +144,21 @@ def mlp_generator_2d():
 
 # ----------------------------------- GAN --------------------------------------------
 class GAN:
+    r"""
+    GAN implementation using jax.experimental
+    generator and discriminator are jax.experimental.stax models: (init_func, apply_func) pairs
+    optimizers are jax.experimental.optimizers optimizers: (init, update, get_params) triplets
+    """
     def __init__(self, d, g, d_opt, g_opt, loss_function):
+        """
+
+        :param d: (dictionary) keys: 'init' and 'apply' representing a jax.experimental.stax model
+        :param g: (dictionary) keys: 'init' and 'apply' representing a jax.experimental.stax model
+        :param d_opt: (dictionary) keys: 'init', 'update', and 'get_params' representing a jax.experimental.optimizer
+        :param g_opt: (dictionary) keys: 'init', 'update', and 'get_params' representing a jax.experimental.optimizer
+        :param loss_function: (function) to calculate loss from discriminator outputs:
+                              (discriminator-outputs, real-labels)-> loss
+        """
         self.d = {'init': d['init'], 'apply': d['apply']}
         self.g = {'init': g['init'], 'apply': g['apply']}
         self.d_opt = {'init': d_opt['init'], 'update': d_opt['update'], 'get_params': d_opt['get_params']}
@@ -156,6 +170,14 @@ class GAN:
         self.g_input_shape = None
 
     def init(self, prng_d, prng_g, d_input_shape, g_input_shape):
+        """
+
+        :param prng_d: (jax.PRNGKey) for discriminator initialization
+        :param prng_g: (jax.PRNGKey) for generator initialization
+        :param d_input_shape: (tuple) shape of the discriminator input excluding batch size
+        :param g_input_shape: (tuple) shape of the generator input excluding batch size
+        :return: discriminator and generator states (needed for train_step and generate_samples)
+        """
         self.g_input_shape = g_input_shape
         self.d_input_shape = d_input_shape
         self.d_output_shape, d_params = self.d['init'](prng_d, (1, *d_input_shape))
@@ -165,7 +187,7 @@ class GAN:
         return d_state, g_state
 
     @partial(jit, static_argnums=(0, 4,))
-    def d_loss(self, d_params, g_params, prng_key, batch_size, real_samples):
+    def _d_loss(self, d_params, g_params, prng_key, batch_size, real_samples):
         z = random.normal(prng_key, (batch_size, *self.g_input_shape))
         fake_ims = self.g['apply'](g_params, z)
 
@@ -178,7 +200,7 @@ class GAN:
         return fake_loss + real_loss
 
     @partial(jit, static_argnums=(0, 4,))
-    def g_loss(self, g_params, d_params, prng_key, batch_size):
+    def _g_loss(self, g_params, d_params, prng_key, batch_size):
         z = random.normal(prng_key, (batch_size, *self.g_input_shape))
         fake_ims = self.g['apply'](g_params, z)
 
@@ -189,21 +211,38 @@ class GAN:
         return loss
 
     @partial(jit, static_argnums=(0, 6,))
-    def train_step(self, i, prng_key, d_state, g_state, real_ims, batch_size):
+    def train_step(self, i, prng_key, d_state, g_state, real_samples, batch_size):
+        """
+        !: call init function before train_step
+
+        :param i: (int) step number
+        :param prng_key: (jax.random.PRNGKey) used to create random samples from the generator
+        :param d_state: previous discriminator state
+        :param g_state: previous generator state
+        :param real_samples: (np/jnp array) samples form the training set
+        :param batch_size: (int)
+        :return: updated discriminator and generator states and discriminator and generator loss values
+        """
         prng1, prng2 = random.split(prng_key, 2)
         d_params = self.d_opt['get_params'](d_state)
         g_params = self.g_opt['get_params'](g_state)
 
-        d_loss_value, d_grads = value_and_grad(self.d_loss)(d_params, g_params, prng1, batch_size, real_ims)
+        d_loss_value, d_grads = value_and_grad(self._d_loss)(d_params, g_params, prng1, batch_size, real_samples)
         d_state = self.d_opt['update'](i, d_grads, d_state)
 
-        g_loss_value, g_grads = value_and_grad(self.g_loss)(g_params, d_params, prng2, batch_size)
+        g_loss_value, g_grads = value_and_grad(self._g_loss)(g_params, d_params, prng2, batch_size)
         g_state = self.g_opt['update'](i, g_grads, g_state)
 
         return d_state, g_state, d_loss_value, g_loss_value
 
     @partial(jit, static_argnums=(0,))
     def generate_samples(self, z, g_state):
+        """
+
+        :param z: (np/jnp array) shape: (n, generator_input_dims)
+        :param g_state: generator state
+        :return: (np/jnp array) shape: (n, generator_output_dims) n generated samples
+        """
         fakes = self.g['apply'](self.g_opt['get_params'](g_state), z)
         return fakes
 
