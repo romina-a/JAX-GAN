@@ -43,18 +43,18 @@ class GAN:
         self.d_input_shape = None
         self.g_input_shape = None
 
-    def init(self, prng_d, prng_g, batch_size, d_input_shape, g_input_shape):
+    def init(self, prng_d, prng_g, d_input_shape, g_input_shape):
         self.g_input_shape = g_input_shape
         self.d_input_shape = d_input_shape
-        self.d_output_shape, d_params = self.d['init'](prng_d, (batch_size, *d_input_shape))
-        self.g_output_shape, g_params = self.g['init'](prng_g, (batch_size, *g_input_shape))
+        self.d_output_shape, d_params = self.d['init'](prng_d, (1, *d_input_shape))
+        self.g_output_shape, g_params = self.g['init'](prng_g, (1, *g_input_shape))
         d_state = self.d_opt['init'](d_params)
         g_state = self.g_opt['init'](g_params)
         return d_state, g_state
 
     @partial(jit, static_argnums=(0, 4,))
     def d_loss(self, d_params, g_params, prng_key, batch_size, real_ims):
-        z = jax.random.normal(prng_key, (batch_size, 100))
+        z = jax.random.normal(prng_key, (batch_size, *self.g_input_shape))
         fake_ims = self.g['apply'](g_params, z)
 
         fake_predictions = self.d['apply'](d_params, fake_ims)
@@ -67,7 +67,7 @@ class GAN:
 
     @partial(jit, static_argnums=(0, 4,))
     def g_loss(self, g_params, d_params, prng_key, batch_size):
-        z = jax.random.normal(prng_key, (batch_size, 100))
+        z = jax.random.normal(prng_key, (batch_size, *self.g_input_shape))
         fake_ims = self.g['apply'](g_params, z)
 
         fake_predictions = self.d['apply'](d_params, fake_ims)
@@ -77,7 +77,7 @@ class GAN:
         return loss
 
     @partial(jit, static_argnums=(0, 6,))
-    def train_step(self, i, prng_key, d_state, g_state, real_ims, batch_size, loss_function=loss_function_default):
+    def train_step(self, i, prng_key, d_state, g_state, real_ims, batch_size):
         prng1, prng2 = jax.random.split(prng_key, 2)
         d_params = self.d_opt['get_params'](d_state)
         g_params = self.g_opt['get_params'](g_state)
@@ -96,21 +96,6 @@ class GAN:
         return fakes
 
 
-# def initialize(dataset,
-#                d_lr=d_lr_default, d_momentum=d_momentum_default, d_momentum2=d_momentum2_default,
-#                g_lr=g_lr_default, g_momentum=g_momentum_default, g_momentum2=g_momentum2_default,
-#                ):
-#     globals()['dataset_loader'] = dataset_loaders[dataset]
-#
-#     globals()['d_init'], globals()['d_apply'] = conv_discriminator()
-#     globals()['g_init'], globals()['g_apply'] = generators[dataset]()
-#
-#     (d_opt_init_fun, d_opt_update_fun, d_opt_get_params) = adam(d_lr, d_momentum, d_momentum2)
-#     (g_opt_init_fun, g_opt_update_fun, g_opt_get_params) = adam(g_lr, g_momentum, g_momentum2)
-#     globals()['d_opt'] = {'init': d_opt_init_fun, 'update': d_opt_update_fun, 'get_params': d_opt_get_params}
-#     globals()['g_opt'] = {'init': g_opt_init_fun, 'update': g_opt_update_fun, 'get_params': g_opt_get_params}
-
-
 def plot_samples(ims):
     for im in ims:
         if im.shape[2] == 1:
@@ -119,58 +104,11 @@ def plot_samples(ims):
         plt.show()
 
 
-# @partial(jit, static_argnums=(3,))
-# def d_loss(d_params, g_params, prng_key, batch_size, real_ims, loss_function):
-#     z = jax.random.normal(prng_key, (batch_size, 100))
-#     fake_ims = g_apply(g_params, z)
-#
-#     fake_predictions = d_apply(d_params, fake_ims)
-#     real_predictions = d_apply(d_params, real_ims)
-#
-#     fake_loss = loss_function(fake_predictions, jnp.zeros(batch_size))
-#     real_loss = loss_function(real_predictions, jnp.ones(batch_size))
-#
-#     return fake_loss + real_loss
-#
-#
-# @partial(jit, static_argnums=(3,))
-# def g_loss(g_params, d_params, prng_key, batch_size, loss_function):
-#     z = jax.random.normal(prng_key, (batch_size, 100))
-#     fake_ims = g_apply(g_params, z)
-#
-#     fake_predictions = d_apply(d_params, fake_ims)
-#
-#     loss = loss_function(fake_predictions, jnp.ones(batch_size))
-#
-#     return loss
-#
-#
-# @partial(jit, static_argnums=(5,))
-# def train_step(i, prng_key, d_state, g_state, real_ims, batch_size, loss_function=loss_function_default):
-#     prng1, prng2 = jax.random.split(prng_key, 2)
-#     d_params = d_opt['get_params'](d_state)
-#     g_params = g_opt['get_params'](g_state)
-#
-#     d_loss_value, d_grads = value_and_grad(d_loss)(d_params, g_params, prng1, batch_size, real_ims, loss_function)
-#     d_state = d_opt['update'](i, d_grads, d_state)
-#
-#     g_loss_value, g_grads = value_and_grad(g_loss)(g_params, d_params, prng2, batch_size, loss_function)
-#     g_state = g_opt['update'](i, g_grads, g_state)
-#
-#     return d_state, g_state, d_loss_value, g_loss_value
-
-
-def train(batch_size, num_iter, digit, dataset=dataset_default, loss_function=loss_function_default,
-          d_lr=d_lr_default, d_momentum=d_momentum_default, d_momentum2=d_momentum2_default,
-          g_lr=g_lr_default, g_momentum=g_momentum_default, g_momentum2=g_momentum2_default,
-          ):
-    dataset_loader = dataset_loaders[dataset]
-    real_data = dataset_loader(batch_size, digit=digit)
-    samples, sample_labels = next(iter(real_data))
-    im_shape = samples[0].shape
-
+def create_and_initialize_gan(prng, dataset,
+                              d_lr, d_momentum, d_momentum2, g_lr, g_momentum, g_momentum2, loss_function,
+                              d_input_shape, g_input_shape):
     temp_d_init, temp_d_apply = conv_discriminator()
-    temp_g_init, temp_g_apply = generators[dataset_default]()
+    temp_g_init, temp_g_apply = generators[dataset]()
     temp_d = {'init': temp_d_init, 'apply': temp_d_apply}
     temp_g = {'init': temp_g_init, 'apply': temp_g_apply}
     (temp_d_opt_init_fun, temp_d_opt_update_fun, temp_d_opt_get_params) = adam(d_lr, d_momentum, d_momentum2)
@@ -180,9 +118,26 @@ def train(batch_size, num_iter, digit, dataset=dataset_default, loss_function=lo
 
     gan = GAN(temp_d, temp_g, temp_d_opt, temp_g_opt, loss_function)
 
+    prng1, prng2 = jax.random.split(prng, 2)
+    d_state, g_state = gan.init(prng1, prng2, d_input_shape, g_input_shape)
+    return gan, d_state, g_state
+
+
+def train(batch_size, num_iter, digit, dataset=dataset_default, loss_function=loss_function_default,
+          d_lr=d_lr_default, d_momentum=d_momentum_default, d_momentum2=d_momentum2_default,
+          g_lr=g_lr_default, g_momentum=g_momentum_default, g_momentum2=g_momentum2_default,
+          ):
     prng = jax.random.PRNGKey(0)
-    prng1, prng2, prng = jax.random.split(prng, 3)
-    d_state, g_state = gan.init(prng1, prng2, batch_size, im_shape, (100,))
+    dataset_loader = dataset_loaders[dataset]
+    real_data = dataset_loader(batch_size, digit=digit)
+    samples, sample_labels = next(iter(real_data))
+    im_shape = samples[0].shape
+
+    prng_to_use, prng = jax.random.split(prng, 2)
+    gan, d_state, g_state = create_and_initialize_gan(prng_to_use, dataset,
+                                                      d_lr, d_momentum, d_momentum2,
+                                                      g_lr, g_momentum, g_momentum2,
+                                                      loss_function, im_shape, (100,))
 
     d_losses = []
     g_losses = []
@@ -192,7 +147,7 @@ def train(batch_size, num_iter, digit, dataset=dataset_default, loss_function=lo
     i = 0
 
     prng_images, prng = jax.random.split(prng, 2)
-    z = jax.random.normal(prng_images, (1, *gan.g_input_shape))
+    z = jax.random.normal(prng_images, (1, 100))
 
     while i < num_iter:
         epoch_start_time = time.time()
@@ -206,7 +161,7 @@ def train(batch_size, num_iter, digit, dataset=dataset_default, loss_function=lo
 
             prng, prng_to_use = jax.random.split(prng, 2)
             d_state, g_state, d_loss_value, g_loss_value = gan.train_step(i, prng_to_use, d_state, g_state, real_ims,
-                                                                      batch_size)
+                                                                          batch_size)
             d_losses.append(d_loss_value)
             g_losses.append(g_loss_value)
             i = i + 1
