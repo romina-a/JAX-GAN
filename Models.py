@@ -6,6 +6,28 @@ from jax.experimental.stax import (BatchNorm, Conv, ConvTranspose, Dense,
 import jax.numpy as jnp
 
 
+# ~~~~~~~~~~~~ helper functions ~~~~~~~~~~~~~~~~~~~~~~~~
+def print_param_dims(params):
+    for a in params:
+        if len(a) == 0:
+            print("()", end='')
+        for b in a:
+            print(b.shape, end=',')
+        print()
+
+
+# ~~~~~~~~~~~~ losses ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def BCE_from_logits(logits, desired_labels):
+    return jnp.mean(
+        jnp.log(1 + jnp.exp(-logits)) * desired_labels +
+        jnp.log(1 + jnp.exp(logits)) * (1 - desired_labels)
+    )
+
+
+def MSE(logits, desired_values):
+    return jnp.mean((logits - desired_values) ** 2)
+
+
 # ---------------------------- layers with stax convention --------------------------
 def Reshape(output_shape):
     def init_fun(rng, input_shape):
@@ -84,3 +106,34 @@ def conv_discriminator():
         Dense(1)
     )
     return model
+
+
+def mlp_discriminator():
+    model = stax.serial(
+        Dense(out_dim=256), LeakyRelu(negative_slope=0.2),
+        # BatchNorm(axis=(1,)),
+        Dense(out_dim=256), LeakyRelu(negative_slope=0.2),
+        # BatchNorm(axis=(1,)),
+        Dense(out_dim=256), LeakyRelu(negative_slope=0.2),
+        # BatchNorm(axis=(1,)),
+        Dense(out_dim=256), LeakyRelu(negative_slope=0.2),
+        # BatchNorm(axis=(1,)),
+        Dense(1)
+    )
+    return model
+
+
+def mlp_generator_2d():
+    model = stax.serial(
+        Dense(out_dim=256), Relu,
+        # BatchNorm(axis=(1,)),
+        Dense(out_dim=256), Relu,
+        # BatchNorm(axis=(1,)),
+        Dense(out_dim=256), Relu,
+        # BatchNorm(axis=(1,)),
+        Dense(out_dim=256), Relu,
+        # BatchNorm(axis=(1,)),
+        Dense(2)
+    )
+    return model
+
