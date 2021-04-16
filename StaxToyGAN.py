@@ -86,8 +86,8 @@ def train(batch_size, num_iter, num_components, dataset=dataset_default,
         if i % 1000 == 0:
             print(f"{i}/{num_iter} took {time.time() - prev_time}")
             prev_time = time.time()
+            plot_samples_scatter(gan.generate_samples(z, g_state), real_ims)
             plot_samples_scatter(gan.generate_samples(z, g_state))
-            plot_samples_scatter(real_ims)
 
         prng, prng_to_use = jax.random.split(prng, 2)
         d_state, g_state, d_loss_value, g_loss_value = gan.train_step(i, prng_to_use, d_state, g_state, real_ims,

@@ -52,7 +52,7 @@ def LeakyRelu(negative_slope):
     return stax.elementwise(leaky_relu, negative_slope=negative_slope)
 
 
-# -----------------------------------   Models   ------------------------------------
+# -----------------------------------   Network Models   ------------------------------------
 def conv_generator_mnist():
     model = stax.serial(
         Dense(1024 * 7 * 7),
@@ -114,13 +114,13 @@ def conv_discriminator():
 
 def mlp_discriminator():
     model = stax.serial(
-        Dense(out_dim=256), LeakyRelu(negative_slope=0.2),
+        Dense(out_dim=256), Relu,
         BatchNorm(axis=(1,)),
-        Dense(out_dim=256), LeakyRelu(negative_slope=0.2),
+        Dense(out_dim=256), Relu,
         BatchNorm(axis=(1,)),
-        Dense(out_dim=256), LeakyRelu(negative_slope=0.2),
+        Dense(out_dim=256), Relu,
         BatchNorm(axis=(1,)),
-        Dense(out_dim=256), LeakyRelu(negative_slope=0.2),
+        Dense(out_dim=256), Relu,
         BatchNorm(axis=(1,)),
         Dense(1)
     )
@@ -129,13 +129,13 @@ def mlp_discriminator():
 
 def mlp_generator_2d():
     model = stax.serial(
-        Dense(out_dim=256), Relu,
+        Dense(out_dim=256, W_init=normal()), Relu,
         BatchNorm(axis=(1,)),
-        Dense(out_dim=256), Relu,
+        Dense(out_dim=256, W_init=normal()), Relu,
         BatchNorm(axis=(1,)),
-        Dense(out_dim=256), Relu,
+        Dense(out_dim=256, W_init=normal()), Relu,
         BatchNorm(axis=(1,)),
-        Dense(out_dim=256), Relu,
+        Dense(out_dim=256, W_init=normal()), Relu,
         BatchNorm(axis=(1,)),
         Dense(2)
     )
