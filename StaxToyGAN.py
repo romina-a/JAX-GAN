@@ -36,7 +36,7 @@ def get_dataset(prng_key, batch_size, num_components):
 
 
 def create_and_initialize_gan(prng, d_lr, d_momentum, d_momentum2, g_lr, g_momentum, g_momentum2, loss_function,
-                              d_input_shape, g_input_shape):
+                              d_input_shape, g_input_shape, batch_size):
     d_creator = mlp_discriminator
     g_creator = mlp_generator_2d
     d_opt_creator = partial(adam, d_lr, d_momentum, d_momentum2)
@@ -45,7 +45,7 @@ def create_and_initialize_gan(prng, d_lr, d_momentum, d_momentum2, g_lr, g_momen
     gan = GAN(d_creator, g_creator, d_opt_creator, g_opt_creator, loss_function)
 
     prng1, prng2 = jax.random.split(prng, 2)
-    d_state, g_state = gan.init(prng1, prng2, d_input_shape, g_input_shape)
+    d_state, g_state = gan.init(prng1, prng2, d_input_shape, g_input_shape, batch_size)
     return gan, d_state, g_state
 
 
@@ -65,7 +65,7 @@ def train(batch_size, num_iter, num_components, dataset=dataset_default,
     gan, d_state, g_state = create_and_initialize_gan(prng_to_use,
                                                       d_lr, d_momentum, d_momentum2,
                                                       g_lr, g_momentum, g_momentum2,
-                                                      loss_function, im_shape, (prior_dim,))
+                                                      loss_function, im_shape, (prior_dim,), batch_size)
 
     d_losses = []
     g_losses = []
