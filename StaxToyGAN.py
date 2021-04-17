@@ -84,12 +84,11 @@ def train(batch_size, num_iter, num_components, dataset=dataset_default,
         if i % 1000 == 0:
             print(f"{i}/{num_iter} took {time.time() - prev_time}")
             prev_time = time.time()
-            plot_samples_scatter(gan.generate_samples(z, g_state), real_ims)
-            plot_samples_scatter(gan.generate_samples(z, g_state))
+            plot_samples_scatter(gan.generate_samples(z, g_state), real_ims, f"./output_ims/{i/1000}.jpg")
+            # plot_samples_scatter(gan.generate_samples(z, g_state))
 
         prng, prng_to_use = jax.random.split(prng, 2)
-        d_state, g_state, d_loss_value, g_loss_value = gan.train_step(i, prng_to_use, d_state, g_state, real_ims,
-                                                                      batch_size, k)
+        d_state, g_state, d_loss_value, g_loss_value = gan.train_step(i, prng_to_use, d_state, g_state, real_ims, k)
         d_losses.append(d_loss_value)
         g_losses.append(g_loss_value)
         i = i + 1
@@ -122,11 +121,12 @@ if __name__ == '__main__':
                         help="generator second momentum")
 
     args = vars(parser.parse_args())
-    train(
-        batch_size=args['batch_size'],
-        num_iter=args['num_iter'],
-        num_components=args['num_components'],
-        dataset=args['dataset'],
-        d_lr=args['d_lr'], d_momentum=args['d_momentum'], d_momentum2=args['d_momentum2'],
-        g_lr=args['g_lr'], g_momentum=args['g_momentum'], g_momentum2=args['g_momentum2'],
-    )
+    d_losses, g_losses, d_state, g_state, gan = train(
+                                                        batch_size=args['batch_size'],
+                                                        num_iter=args['num_iter'],
+                                                        num_components=args['num_components'],
+                                                        dataset=args['dataset'],
+                                                        d_lr=args['d_lr'], d_momentum=args['d_momentum'], d_momentum2=args['d_momentum2'],
+                                                        g_lr=args['g_lr'], g_momentum=args['g_momentum'], g_momentum2=args['g_momentum2'],
+                                                    )
+    gan.save_gan_to_file(gan, d_state, g_state, "./gan.pkl")
