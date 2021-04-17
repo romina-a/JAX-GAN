@@ -95,7 +95,7 @@ def train(batch_size, num_iter, digit, dataset=dataset_default, loss_function=lo
 
             prng, prng_to_use = jax.random.split(prng, 2)
             d_state, g_state, d_loss_value, g_loss_value = gan.train_step(i, prng_to_use, d_state, g_state, real_ims,
-                                                                          batch_size)
+                                                                          batch_size, None)
             d_losses.append(d_loss_value)
             g_losses.append(g_loss_value)
             i = i + 1

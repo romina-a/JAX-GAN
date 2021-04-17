@@ -1,6 +1,7 @@
 import jax.random as random
 import jax.numpy as jnp
 import numpy as np
+import os
 
 
 class DataLoader:
@@ -52,3 +53,22 @@ class GaussianMixture(DataLoader):
         batch = np.array(batch)
         batch = batch[random.permutation(shuffle_key, len(batch)), ]
         return batch
+
+
+class Ones(DataLoader):
+    def __init__(self, batch_size):
+        self.batch_size = batch_size
+
+    def get_next_batch(self):
+        return jnp.ones((self.batch_size, 2))
+
+def get_toy_data_gaussian(prng, components, variance, num_iters, batch_size):
+    path = f"./ToyData/GaussianMixture-{components}-{variance}"
+    if os.path.exists(path):
+        data = np.load(path)
+    else:
+        np.save()
+        data = np.array([])
+        dl = GaussianMixture(prng, batch_size, components, variance)
+        for i in range(num_iters):
+            pass

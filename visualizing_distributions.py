@@ -16,12 +16,12 @@ def plot_samples_scatter(samples, samples2=None):
     X = samples[:, 0]
     Y = samples[:, 1]
 
-    plt.scatter(X, Y)
+    plt.scatter(X, Y, alpha=0.2)
 
     if samples2 is not None:
         X2 = samples2[:, 0]
         Y2 = samples2[:, 1]
 
-        plt.scatter(X2, Y2)
+        plt.scatter(X2, Y2, alpha=0.2)
 
     plt.show()
