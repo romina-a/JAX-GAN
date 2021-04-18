@@ -66,25 +66,29 @@ def train(batch_size, num_iter, num_components, dataset=dataset_default,
                                                       d_lr, d_momentum, d_momentum2,
                                                       g_lr, g_momentum, g_momentum2,
                                                       loss_function, im_shape, (prior_dim,), batch_size)
-
     d_losses = []
     g_losses = []
 
-    start_time = time.time()
-    prev_time = time.time()
     i = 0
-
+    j = 0
     prng_images, prng = jax.random.split(prng, 2)
     z = jax.random.normal(prng_images, (batch_size, prior_dim_default))
 
+    start_time = time.time()
+    prev_time = time.time()
+    load_time = 0
     while i < num_iter:
+
+        t = time.time()
         real_ims = dataset_loader.get_next_batch()
+        load_time = load_time + time.time()-t
         if i >= num_iter:
             break
         if i % 1000 == 0:
-            print(f"{i}/{num_iter} took {time.time() - prev_time}")
+            print(f"{i}/{num_iter} took {time.time() - prev_time}; data generating took {load_time}")
             prev_time = time.time()
-            plot_samples_scatter(gan.generate_samples(z, g_state), real_ims, f"./output_ims/{i/1000}.jpg")
+            load_time = 0
+            plot_samples_scatter(gan.generate_samples(z, g_state), real_ims, f"./output_ims/2/{i//1000}.jpg")
             # plot_samples_scatter(gan.generate_samples(z, g_state))
 
         prng, prng_to_use = jax.random.split(prng, 2)
