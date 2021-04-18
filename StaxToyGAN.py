@@ -87,7 +87,10 @@ def train(batch_size, num_iter, num_components, dataset=dataset_default,
             print(f"{i}/{num_iter} took {time.time() - prev_time}; data generating took {load_time}")
             prev_time = time.time()
             load_time = 0
-            plot_samples_scatter(gan.generate_samples(z, g_state), real_ims, f"./output_ims/2-without-no-norm/{i//1000}.jpg")
+            fakes = gan.generate_samples(z, g_state)
+            plot_samples_scatter(fakes, real_ims,
+                                 save_adr=f"./output_ims/2-without-no-norm/{i//1000}.jpg",
+                                 samples_ratings=gan.rate_samples(fakes, d_state))
             # plot_samples_scatter(gan.generate_samples(z, g_state))
         if top_k and i % 2000 == 1999:
             k = int(k * decay_rate_default)
