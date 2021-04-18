@@ -127,13 +127,13 @@ def conv_discriminator():
 def mlp_discriminator():
     model = stax.serial(
         Dense(out_dim=256), Relu,
-        BatchNorm(axis=(1,)),
+        # BatchNorm(axis=(1,)),
         Dense(out_dim=256), Relu,
-        BatchNorm(axis=(1,)),
+        # BatchNorm(axis=(1,)),
         Dense(out_dim=256), Relu,
-        BatchNorm(axis=(1,)),
+        # BatchNorm(axis=(1,)),
         Dense(out_dim=256), Relu,
-        BatchNorm(axis=(1,)),
+        # BatchNorm(axis=(1,)),
         Dense(1)
     )
     return model
@@ -142,13 +142,13 @@ def mlp_discriminator():
 def mlp_generator_2d():
     model = stax.serial(
         Dense(out_dim=256, W_init=normal()), Relu,
-        BatchNorm(axis=(1,)),
+        # BatchNorm(axis=(1,)),
         Dense(out_dim=256, W_init=normal()), Relu,
-        BatchNorm(axis=(1,)),
+        # BatchNorm(axis=(1,)),
         Dense(out_dim=256, W_init=normal()), Relu,
-        BatchNorm(axis=(1,)),
+        # BatchNorm(axis=(1,)),
         Dense(out_dim=256, W_init=normal()), Relu,
-        BatchNorm(axis=(1,)),
+        # BatchNorm(axis=(1,)),
         Dense(2)
     )
     return model
@@ -268,6 +268,7 @@ class GAN:
 
         fake_predictions = self.d['apply'](d_params, fake_ims)
         fake_predictions = sort(fake_predictions, 0)
+        fake_predictions = jnp.flip(fake_predictions, 0)
         fake_predictions = fake_predictions[:k]
 
         loss = self.loss_function(fake_predictions, jnp.ones(len(fake_predictions)))
@@ -312,4 +313,13 @@ class GAN:
         """
         fakes = self.g['apply'](self.g_opt['get_params'](g_state), z)
         return fakes
+
+    @partial(jit, static_argnums=(0,))
+    def rate_samples(self, samples, d_state):
+        """
+
+        :return: (jnp array) shape: (n, 1) discriminator ratings for the samples
+        """
+        rates = self.d['apply'](self.d_opt['get_params'](d_state), samples)
+        return rates
 
