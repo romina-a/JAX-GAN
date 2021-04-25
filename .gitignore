@@ -5,3 +5,6 @@ tmp
 test*
 __pycache__
 *.pkl
+output_ims
+Models
+ToyData
