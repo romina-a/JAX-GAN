@@ -2,6 +2,8 @@ import jax
 import jax.numpy as jnp
 from jax.experimental.optimizers import adam
 
+from jax.config import config
+
 import argparse
 import time
 
@@ -10,6 +12,11 @@ from Models import BCE_from_logits
 from ToyData import get_gaussian_mixture
 from visualizing_distributions import plot_samples_scatter
 from functools import partial
+
+# this is to raise exception when nans are created
+JAX_DEBUG_NANS = True
+config.update("jax_debug_nans", True)
+
 
 # ~~~~~~~~~~~ Stax GAN ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 dataset_default = 'gaussian_mixture'
@@ -50,17 +57,20 @@ def train(num_components, batch_size=batch_size_default, num_iter=num_iter_defau
           dataset=dataset_default, loss_function=loss_function_default,
           prior_dim=prior_dim_default, d_lr=d_lr_default, d_momentum=d_momentum_default,
           d_momentum2=d_momentum2_default, g_lr=g_lr_default, g_momentum=g_momentum_default,
-          g_momentum2=g_momentum2_default, top_k=1):
+          g_momentum2=g_momentum2_default, top_k=1, save_adr_plots_folder=None, save_adr_model=None):
     prng = jax.random.PRNGKey(10)
-
     im_shape = (2,)
     prng_to_use, prng = jax.random.split(prng, 2)
     gan, d_state, g_state = create_and_initialize_gan(prng_to_use,
                                                       d_lr, d_momentum, d_momentum2,
                                                       g_lr, g_momentum, g_momentum2,
                                                       loss_function, im_shape, (prior_dim,), batch_size)
+    if num_iter < num_iter_default:
+        data = get_gaussian_mixture(batch_size, num_iter_default, num_components, gaussian_variance_default)
+        data = data[:num_iter]
+    else:
+        data = get_gaussian_mixture(batch_size, num_iter, num_components, gaussian_variance_default)
 
-    data = get_gaussian_mixture(batch_size, num_iter, num_components, gaussian_variance_default)
 
     d_losses = []
     g_losses = []
@@ -76,8 +86,9 @@ def train(num_components, batch_size=batch_size_default, num_iter=num_iter_defau
             print(f"{i}/{num_iter} took {time.time() - prev_time}")
             prev_time = time.time()
             fakes = gan.generate_samples(z, g_state)
+            if save_adr_plots_folder is not None: save_adr_plots_folder = save_adr_plots_folder + f"{num_components}-{top_k}-{i // 1000}.jpg"
             plot_samples_scatter(fakes, real_ims,
-                                 save_adr=f"./output_ims/experiment2-seed=10/{num_components}-{top_k}-{i//1000}.jpg",
+                                 save_adr=save_adr_plots_folder,
                                  samples_ratings=gan.rate_samples(fakes, d_state))
             # plot_samples_scatter(gan.generate_samples(z, g_state))
         if top_k == 1 and i % 2000 == 1999:
@@ -86,10 +97,14 @@ def train(num_components, batch_size=batch_size_default, num_iter=num_iter_defau
             print(f"iter:{i}/{num_iter}, updated k: {k}")
 
         prng, prng_to_use = jax.random.split(prng, 2)
+
         d_state, g_state, d_loss_value, g_loss_value = gan.train_step(i, prng_to_use, d_state, g_state, real_ims, k)
+
         d_losses.append(d_loss_value)
         g_losses.append(g_loss_value)
     print(f'finished, took{time.time() - start_time}')
+    if save_adr_model is not None:
+        gan.save_gan_to_file(gan, d_state, g_state, save_adr_model)
 
     return d_losses, g_losses, d_state, g_state, gan
 
@@ -118,6 +133,12 @@ if __name__ == '__main__':
                         help="generator momentum")
     parser.add_argument("--g_momentum2", required=False, default=g_momentum2_default, type=jnp.float32,
                         help="generator second momentum")
+    parser.add_argument("--save_adr_plots_folder", required=False, default=None, type=str,
+                        help="folder to save the generated plots")
+    parser.add_argument("--save_adr_plots_folder", required=False, default=None, type=str,
+                        help="address of the folder to save the generated plots")
+    parser.add_argument("--save_adr_model", required=False, default=None, type=str,
+                        help="address with pkl extension to save the trained models")
 
     args = vars(parser.parse_args())
     d_losses, g_losses, d_state, g_state, gan = train(num_components=args['num_components'],
@@ -125,5 +146,7 @@ if __name__ == '__main__':
                                                       dataset=args['dataset'], d_lr=args['d_lr'],
                                                       d_momentum=args['d_momentum'], d_momentum2=args['d_momentum2'],
                                                       g_lr=args['g_lr'], g_momentum=args['g_momentum'],
-                                                      g_momentum2=args['g_momentum2'], top_k=args['top_k'])
-    gan.save_gan_to_file(gan, d_state, g_state, "./Models/gan-25-wo-no-norm.pkl")
+                                                      g_momentum2=args['g_momentum2'], top_k=args['top_k'],
+                                                      save_adr_plots_folder=args['save_adr_plots_folder'],
+                                                      save_adr_model=args['save_adr_model']
+                                                      )

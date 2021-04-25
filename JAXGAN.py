@@ -1,10 +1,6 @@
 import jax.numpy as jnp
-import numpy as np
 from jax import jit, vmap, value_and_grad
 from jax import random
-from functools import partial
-from jax.experimental import stax
-from jax.experimental import optimizers
 from dataset_loader import get_NumpyLoader_mnist
 
 import time

@@ -13,6 +13,7 @@ from jax import value_and_grad, jit
 from functools import partial
 import pickle
 import os
+import math
 
 
 # ~~~~~~~~~~~~ helper functions ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -35,10 +36,10 @@ def load_state(file_adr, file_name):
 
 # ~~~~~~~~~~~~ losses ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def BCE_from_logits(logits, desired_labels):
-    return jnp.mean(
-        jnp.log(1 + jnp.exp(-logits)) * desired_labels +
-        jnp.log(1 + jnp.exp(logits)) * (1 - desired_labels)
-    )
+    loss_array = jnp.log(1 + jnp.exp(-logits)) * desired_labels + jnp.log(1 + jnp.exp(logits)) * (1 - desired_labels)
+    loss_array = jnp.nan_to_num(loss_array)
+    loss = jnp.mean(loss_array)
+    return loss
 
 
 def MSE(logits, desired_values):
@@ -127,13 +128,13 @@ def conv_discriminator():
 
 def mlp_discriminator():
     model = stax.serial(
-        Dense(out_dim=256), Relu,
+        Dense(out_dim=256, W_init=normal()), Relu,
         # BatchNorm(axis=(1,)),
-        Dense(out_dim=256), Relu,
+        Dense(out_dim=256, W_init=normal()), Relu,
         # BatchNorm(axis=(1,)),
-        Dense(out_dim=256), Relu,
+        Dense(out_dim=256, W_init=normal()), Relu,
         # BatchNorm(axis=(1,)),
-        Dense(out_dim=256), Relu,
+        Dense(out_dim=256, W_init=normal()), Relu,
         # BatchNorm(axis=(1,)),
         Dense(1)
     )
@@ -142,13 +143,13 @@ def mlp_discriminator():
 
 def mlp_generator_2d():
     model = stax.serial(
-        Dense(out_dim=256), Relu,
+        Dense(out_dim=256, W_init=normal()), Relu,
         # BatchNorm(axis=(1,)),
-        Dense(out_dim=256), Relu,
+        Dense(out_dim=256, W_init=normal()), Relu,
         # BatchNorm(axis=(1,)),
-        Dense(out_dim=256), Relu,
+        Dense(out_dim=256, W_init=normal()), Relu,
         # BatchNorm(axis=(1,)),
-        Dense(out_dim=256), Relu,
+        Dense(out_dim=256, W_init=normal()), Relu,
         # BatchNorm(axis=(1,)),
         Dense(2)
     )
