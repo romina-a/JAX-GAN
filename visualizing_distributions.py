@@ -22,7 +22,7 @@ def plot_samples_scatter(samples, samples2=None, save_adr=None, samples_ratings=
         X2 = samples2[:, 0]
         Y2 = samples2[:, 1]
 
-        plt.scatter(X2, Y2, color='red', alpha=0.5)
+        plt.scatter(X2, Y2, color='red', alpha=0.2)
 
     if samples_ratings is not None or samples2_ratings is not None:
         plt.colorbar()

@@ -141,13 +141,13 @@ def mlp_discriminator():
 
 def mlp_generator_2d():
     model = stax.serial(
-        Dense(out_dim=256, W_init=normal()), Relu,
+        Dense(out_dim=256), Relu,
         # BatchNorm(axis=(1,)),
-        Dense(out_dim=256, W_init=normal()), Relu,
+        Dense(out_dim=256), Relu,
         # BatchNorm(axis=(1,)),
-        Dense(out_dim=256, W_init=normal()), Relu,
+        Dense(out_dim=256), Relu,
         # BatchNorm(axis=(1,)),
-        Dense(out_dim=256, W_init=normal()), Relu,
+        Dense(out_dim=256), Relu,
         # BatchNorm(axis=(1,)),
         Dense(2)
     )

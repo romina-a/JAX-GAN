@@ -3,6 +3,8 @@ import jax.numpy as jnp
 import numpy as np
 import os
 
+SEED_DEFAULT = 100
+
 
 class DataLoader:
     def get_next_batch(self):
@@ -54,21 +56,34 @@ class GaussianMixture(DataLoader):
         batch = batch[random.permutation(shuffle_key, len(batch)), ]
         return batch
 
+    def get_iteration_samples(self, num_iter):
+        self.prng, counts_key, shuffle_key, *keys = random.split(self.prng, self.num_modes + 3)
+        numbs, counts = np.unique(random.randint(counts_key, (self.batch_size * num_iter,), 0, self.num_modes),
+                                  return_counts=True)
+        batches = []
+        for i, comp_ind in enumerate(numbs):
+            print(f"creating {i}th components: {self.means[comp_ind]}->{counts[i]}")
+            samples = random.multivariate_normal(keys[i], self.means[comp_ind], self.covariances[comp_ind],
+                                                 (counts[i],), jnp.float32)
+            batches.extend(samples)
+        batches = np.array(batches)
+        print(f"shuffling")
+        batches = batches[random.permutation(shuffle_key, len(batches)), ]
+        batches = batches.reshape((num_iter, self.batch_size, self.means[1].size))
+        return batches
 
-class Ones(DataLoader):
-    def __init__(self, batch_size):
-        self.batch_size = batch_size
 
-    def get_next_batch(self):
-        return jnp.ones((self.batch_size, 2))
-
-def get_toy_data_gaussian(prng, components, variance, num_iters, batch_size):
-    path = f"./ToyData/GaussianMixture-{components}-{variance}"
-    if os.path.exists(path):
+def get_gaussian_mixture(batch_size, num_iters, components, variance, seed=SEED_DEFAULT,
+                         save=True, from_file=True):
+    prng = random.PRNGKey(seed)
+    path = f"./ToyData/GaussianMixture-{components}-{variance}-{batch_size}-{num_iters}.npy"
+    if os.path.exists(path) and from_file:
+        print("file exists")
         data = np.load(path)
     else:
-        np.save()
-        data = np.array([])
+        print("file didn't exist, creating")
         dl = GaussianMixture(prng, batch_size, components, variance)
-        for i in range(num_iters):
-            pass
+        data = dl.get_iteration_samples(num_iters)
+        if save:
+            np.save(path, data)
+    return data

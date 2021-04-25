@@ -7,13 +7,14 @@ import time
 
 from Models import mlp_generator_2d, mlp_discriminator, GAN
 from Models import BCE_from_logits
-from ToyData import GaussianMixture
+from ToyData import get_gaussian_mixture
 from visualizing_distributions import plot_samples_scatter
 from functools import partial
 
 # ~~~~~~~~~~~ Stax GAN ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 dataset_default = 'gaussian_mixture'
 num_components_default = 25
+gaussian_variance_default = 0.0025
 prior_dim_default = 2
 
 d_lr_default = 0.0001
@@ -31,10 +32,6 @@ decay_rate_default = 0.99
 num_iter_default = 100000
 
 
-def get_dataset(prng_key, batch_size, num_components):
-    return GaussianMixture(prng_key, batch_size, num_modes=num_components, variance=0.0025)
-
-
 def create_and_initialize_gan(prng, d_lr, d_momentum, d_momentum2, g_lr, g_momentum, g_momentum2, loss_function,
                               d_input_shape, g_input_shape, batch_size):
     d_creator = mlp_discriminator
@@ -49,50 +46,41 @@ def create_and_initialize_gan(prng, d_lr, d_momentum, d_momentum2, g_lr, g_momen
     return gan, d_state, g_state
 
 
-def train(batch_size, num_iter, num_components, dataset=dataset_default,
-          loss_function=loss_function_default,
-          prior_dim=prior_dim_default,
-          d_lr=d_lr_default, d_momentum=d_momentum_default, d_momentum2=d_momentum2_default,
-          g_lr=g_lr_default, g_momentum=g_momentum_default, g_momentum2=g_momentum2_default,
-          top_k=False):
-    prng = jax.random.PRNGKey(0)
-    prng_to_use, prng = jax.random.split(prng)
-    dataset_loader = get_dataset(prng_to_use, batch_size, num_components)
-    im_shape = (2,)
+def train(num_components, batch_size=batch_size_default, num_iter=num_iter_default,
+          dataset=dataset_default, loss_function=loss_function_default,
+          prior_dim=prior_dim_default, d_lr=d_lr_default, d_momentum=d_momentum_default,
+          d_momentum2=d_momentum2_default, g_lr=g_lr_default, g_momentum=g_momentum_default,
+          g_momentum2=g_momentum2_default, top_k=1):
+    prng = jax.random.PRNGKey(10)
 
+    im_shape = (2,)
     prng_to_use, prng = jax.random.split(prng, 2)
     gan, d_state, g_state = create_and_initialize_gan(prng_to_use,
                                                       d_lr, d_momentum, d_momentum2,
                                                       g_lr, g_momentum, g_momentum2,
                                                       loss_function, im_shape, (prior_dim,), batch_size)
+
+    data = get_gaussian_mixture(batch_size, num_iter, num_components, gaussian_variance_default)
+
     d_losses = []
     g_losses = []
 
-    i = 0
     prng_images, prng = jax.random.split(prng, 2)
     z = jax.random.normal(prng_images, (10000, prior_dim_default))
 
     start_time = time.time()
     prev_time = time.time()
-    load_time = 0
     k = batch_size
-    while i < num_iter:
-
-        t = time.time()
-        real_ims = dataset_loader.get_next_batch()
-        load_time = load_time + time.time()-t
-        if i >= num_iter:
-            break
+    for i, real_ims in enumerate(data):
         if i % 1000 == 0:
-            print(f"{i}/{num_iter} took {time.time() - prev_time}; data generating took {load_time}")
+            print(f"{i}/{num_iter} took {time.time() - prev_time}")
             prev_time = time.time()
-            load_time = 0
             fakes = gan.generate_samples(z, g_state)
             plot_samples_scatter(fakes, real_ims,
-                                 save_adr=f"./output_ims/2-without-no-norm/{i//1000}.jpg",
+                                 save_adr=f"./output_ims/experiment2-seed=10/{num_components}-{top_k}-{i//1000}.jpg",
                                  samples_ratings=gan.rate_samples(fakes, d_state))
             # plot_samples_scatter(gan.generate_samples(z, g_state))
-        if top_k and i % 2000 == 1999:
+        if top_k == 1 and i % 2000 == 1999:
             k = int(k * decay_rate_default)
             k = max(batch_size_min_default, k)
             print(f"iter:{i}/{num_iter}, updated k: {k}")
@@ -101,7 +89,6 @@ def train(batch_size, num_iter, num_components, dataset=dataset_default,
         d_state, g_state, d_loss_value, g_loss_value = gan.train_step(i, prng_to_use, d_state, g_state, real_ims, k)
         d_losses.append(d_loss_value)
         g_losses.append(g_loss_value)
-        i = i + 1
     print(f'finished, took{time.time() - start_time}')
 
     return d_losses, g_losses, d_state, g_state, gan
@@ -109,6 +96,8 @@ def train(batch_size, num_iter, num_components, dataset=dataset_default,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument("--top_k", required=False, default=1, type=int,
+                        choices={1, 0}, help="1: use top-k, 0: no top-k")
     parser.add_argument("--batch_size", required=False, default=batch_size_default, type=int,
                         help="training batch size")
     parser.add_argument("--num_iter", required=False, default=num_iter_default, type=int,
@@ -131,14 +120,10 @@ if __name__ == '__main__':
                         help="generator second momentum")
 
     args = vars(parser.parse_args())
-    d_losses, g_losses, d_state, g_state, gan = train(
-                                                        batch_size=args['batch_size'],
-                                                        num_iter=args['num_iter'],
-                                                        num_components=args['num_components'],
-                                                        dataset=args['dataset'],
-                                                        d_lr=args['d_lr'], d_momentum=args['d_momentum'],
-                                                        d_momentum2=args['d_momentum2'],
-                                                        g_lr=args['g_lr'], g_momentum=args['g_momentum'],
-                                                        g_momentum2=args['g_momentum2'],
-                                                    )
+    d_losses, g_losses, d_state, g_state, gan = train(num_components=args['num_components'],
+                                                      batch_size=args['batch_size'], num_iter=args['num_iter'],
+                                                      dataset=args['dataset'], d_lr=args['d_lr'],
+                                                      d_momentum=args['d_momentum'], d_momentum2=args['d_momentum2'],
+                                                      g_lr=args['g_lr'], g_momentum=args['g_momentum'],
+                                                      g_momentum2=args['g_momentum2'], top_k=args['top_k'])
     gan.save_gan_to_file(gan, d_state, g_state, "./Models/gan-25-wo-no-norm.pkl")
