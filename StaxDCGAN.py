@@ -8,7 +8,7 @@ import time
 from functools import partial
 
 from Models import conv_generator_mnist, conv_generator_cifar10, conv_discriminator, GAN
-from Models import BCE_from_logits
+from Models import BCE
 from dataset_loader import get_NumpyLoader_mnist as mnist_dataset
 from dataset_loader import get_NumpyLoader_cifar10 as cifar10_dataset
 
@@ -17,7 +17,7 @@ dataset_default = 'mnist'
 digit_default = 0
 
 batch_size_default = 128
-num_iter_default = 2000
+num_iter_default = 10000
 batch_size_min_default = 64
 decay_rate_default = 0.99
 
@@ -27,13 +27,13 @@ d_momentum2_default = 0.99
 g_lr_default = 0.0002
 g_momentum_default = 0.5
 g_momentum2_default = 0.99
-loss_function_default = BCE_from_logits
+loss_function_default = BCE
 
 dataset_loaders = {'mnist': mnist_dataset, 'cifar10': cifar10_dataset}
 generators = {'mnist': conv_generator_mnist, 'cifar10': conv_generator_cifar10}
 
 
-def plot_samples(ims, grid_dim=1, save_adr=None):
+def plot_samples(ims, grid_dim=1, save_adr=None, show_plots=True):
     dim1 = grid_dim
     dim2 = len(ims)//dim1
 
@@ -46,7 +46,10 @@ def plot_samples(ims, grid_dim=1, save_adr=None):
         plt.axis('off')
     if save_adr is not None:
         plt.savefig(save_adr)
-    plt.show()
+    if show_plots:
+        plt.show()
+    else:
+        plt.clf()
 
 
 def create_and_initialize_gan(prng, d_lr, d_momentum, d_momentum2, g_lr, g_momentum, g_momentum2, loss_function,
@@ -66,6 +69,7 @@ def create_and_initialize_gan(prng, d_lr, d_momentum, d_momentum2, g_lr, g_momen
 def train(batch_size=batch_size_default, num_iter=num_iter_default, digit=digit_default, dataset=dataset_default, loss_function=loss_function_default,
           d_lr=d_lr_default, d_momentum=d_momentum_default, d_momentum2=d_momentum2_default,
           g_lr=g_lr_default, g_momentum=g_momentum_default, g_momentum2=g_momentum2_default,
+          save_adr_plots_folder=None, save_adr_model=None, show_plots=True,
           top_k=1):
 
     dataset_loader = dataset_loaders[dataset]
@@ -84,7 +88,6 @@ def train(batch_size=batch_size_default, num_iter=num_iter_default, digit=digit_
     g_losses = []
 
     start_time = time.time()
-    prev_time = time.time()
     i = 0
 
     prng_images, prng = jax.random.split(prng, 2)
@@ -96,10 +99,6 @@ def train(batch_size=batch_size_default, num_iter=num_iter_default, digit=digit_
         for real_ims, _ in real_data:
             if i >= num_iter:
                 break
-            if i % 100 == 0:
-                print(f"{i}/{num_iter} took {time.time() - prev_time}")
-                prev_time = time.time()
-                plot_samples(gan.generate_samples(z, g_state), 3)
 
             prng, prng_to_use = jax.random.split(prng, 2)
             d_state, g_state, d_loss_value, g_loss_value = gan.train_step(i, prng_to_use, d_state, g_state, real_ims, k)
@@ -107,12 +106,14 @@ def train(batch_size=batch_size_default, num_iter=num_iter_default, digit=digit_
             g_losses.append(g_loss_value)
             i = i + 1
         print(f'epoch finished in {time.time() - epoch_start_time}')
+        plot_samples(gan.generate_samples(z, g_state), 3, save_adr=save_adr_plots_folder+f"-{top_k}-{i}.jpg")
         if top_k == 1:
             k = int(k * decay_rate_default)
             k = max(batch_size_min_default, k)
             print(f"iter:{i}/{num_iter}, updated k: {k}")
     print(f'finished, took{time.time() - start_time}')
-
+    if save_adr_model is not None:
+        gan.save_gan_to_file(gan, d_state, g_state, save_adr_model+f"-{top_k}-{dataset}.pkl")
     return d_losses, g_losses, d_state, g_state, gan
 
 
