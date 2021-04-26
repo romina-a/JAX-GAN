@@ -14,7 +14,9 @@ from functools import partial
 import pickle
 import os
 
-EPSILON = 1e-20
+finfo = jnp.finfo(jnp.float32)
+EPS = finfo.eps
+EPSNEG = finfo.epsneg
 
 
 # ~~~~~~~~~~~~ helper functions ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -38,14 +40,14 @@ def load_state(file_adr, file_name):
 # ~~~~~~~~~~~~ losses ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def BCE_from_logits(logits, targets):
     p = sigmoid(logits)
-    loss_array = -jnp.log(jnp.where(p == 0, EPSILON, p)) * targets\
-                 - jnp.log(jnp.where(1-p == 0, EPSILON, 1-p)) * (1 - targets)
+    loss_array = -jnp.log(jnp.where(p == 0, EPS, p)) * targets\
+                 - jnp.log(1 - jnp.where(p == 1, 1-EPSNEG, p)) * (1 - targets)
     return jnp.mean(loss_array)
 
 
 def BCE(predictions, targets):
-    loss_array = -jnp.log(jnp.where(predictions == 0, EPSILON, predictions)) * targets\
-                 -jnp.log(jnp.where(1-predictions == 0, EPSILON, 1-predictions)) * (1 - targets)
+    loss_array = -jnp.log(jnp.where(predictions == 0, EPS, predictions)) * targets\
+                 -jnp.log(1 - jnp.where(predictions == 1, 1-EPSNEG, predictions)) * (1 - targets)
     return jnp.mean(loss_array)
 
 
