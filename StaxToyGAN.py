@@ -53,11 +53,12 @@ def create_and_initialize_gan(prng, d_lr, d_momentum, d_momentum2, g_lr, g_momen
     return gan, d_state, g_state
 
 
-def train(num_components, batch_size=batch_size_default, num_iter=num_iter_default,
+def train(num_components, variance=gaussian_variance_default,
+          batch_size=batch_size_default, num_iter=num_iter_default,
           dataset=dataset_default, loss_function=loss_function_default,
           prior_dim=prior_dim_default, d_lr=d_lr_default, d_momentum=d_momentum_default,
           d_momentum2=d_momentum2_default, g_lr=g_lr_default, g_momentum=g_momentum_default,
-          g_momentum2=g_momentum2_default, top_k=1, save_adr_plots_folder=None, save_adr_model=None):
+          g_momentum2=g_momentum2_default, top_k=1, save_adr_plots_folder=None, save_adr_model_folder=None):
     prng = jax.random.PRNGKey(10)
     im_shape = (2,)
     prng_to_use, prng = jax.random.split(prng, 2)
@@ -66,10 +67,10 @@ def train(num_components, batch_size=batch_size_default, num_iter=num_iter_defau
                                                       g_lr, g_momentum, g_momentum2,
                                                       loss_function, im_shape, (prior_dim,), batch_size)
     if num_iter < num_iter_default:
-        data = get_gaussian_mixture(batch_size, num_iter_default, num_components, gaussian_variance_default)
+        data = get_gaussian_mixture(batch_size, num_iter_default, num_components, variance)
         data = data[:num_iter]
     else:
-        data = get_gaussian_mixture(batch_size, num_iter, num_components, gaussian_variance_default)
+        data = get_gaussian_mixture(batch_size, num_iter, num_components, variance)
 
 
     d_losses = []
@@ -86,9 +87,10 @@ def train(num_components, batch_size=batch_size_default, num_iter=num_iter_defau
             print(f"{i}/{num_iter} took {time.time() - prev_time}")
             prev_time = time.time()
             fakes = gan.generate_samples(z, g_state)
-            if save_adr_plots_folder is not None: save_adr_plots_folder = save_adr_plots_folder + f"{num_components}-{top_k}-{i // 1000}.jpg"
+            save_adr_plot = None
+            if save_adr_plots_folder is not None: save_adr_plot = save_adr_plots_folder + f"{num_components}-{top_k}-{i // 1000}.jpg"
             plot_samples_scatter(fakes, real_ims,
-                                 save_adr=save_adr_plots_folder,
+                                 save_adr=save_adr_plot,
                                  samples_ratings=gan.rate_samples(fakes, d_state))
             # plot_samples_scatter(gan.generate_samples(z, g_state))
         if top_k == 1 and i % 2000 == 1999:
@@ -103,8 +105,9 @@ def train(num_components, batch_size=batch_size_default, num_iter=num_iter_defau
         d_losses.append(d_loss_value)
         g_losses.append(g_loss_value)
     print(f'finished, took{time.time() - start_time}')
-    if save_adr_model is not None:
-        gan.save_gan_to_file(gan, d_state, g_state, save_adr_model)
+    if save_adr_model_folder is not None:
+        top_k_str = "topk" if top_k == 1 else "notopk"
+        gan.save_gan_to_file(gan, d_state, g_state, save_adr_model_folder+f"{num_components}-{variance}-{top_k_str}.pkl")
 
     return d_losses, g_losses, d_state, g_state, gan
 
@@ -135,9 +138,7 @@ if __name__ == '__main__':
                         help="generator second momentum")
     parser.add_argument("--save_adr_plots_folder", required=False, default=None, type=str,
                         help="folder to save the generated plots")
-    parser.add_argument("--save_adr_plots_folder", required=False, default=None, type=str,
-                        help="address of the folder to save the generated plots")
-    parser.add_argument("--save_adr_model", required=False, default=None, type=str,
+    parser.add_argument("--save_adr_model_folder", required=False, default=None, type=str,
                         help="address with pkl extension to save the trained models")
 
     args = vars(parser.parse_args())
@@ -148,5 +149,5 @@ if __name__ == '__main__':
                                                       g_lr=args['g_lr'], g_momentum=args['g_momentum'],
                                                       g_momentum2=args['g_momentum2'], top_k=args['top_k'],
                                                       save_adr_plots_folder=args['save_adr_plots_folder'],
-                                                      save_adr_model=args['save_adr_model']
+                                                      save_adr_model_folder=args['save_adr_model_folder']
                                                       )

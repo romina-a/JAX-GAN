@@ -1,5 +1,5 @@
 from jax.nn.initializers import normal
-from jax.nn import leaky_relu
+from jax.nn import leaky_relu, sigmoid
 from jax.experimental import stax
 from jax.experimental.stax import (BatchNorm, Conv, ConvTranspose, Dense,
                                    Tanh, Relu, Flatten)
@@ -13,7 +13,8 @@ from jax import value_and_grad, jit
 from functools import partial
 import pickle
 import os
-import math
+
+EPSILON = 1e-10
 
 
 # ~~~~~~~~~~~~ helper functions ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -35,11 +36,17 @@ def load_state(file_adr, file_name):
 
 
 # ~~~~~~~~~~~~ losses ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def BCE_from_logits(logits, desired_labels):
-    loss_array = jnp.log(1 + jnp.exp(-logits)) * desired_labels + jnp.log(1 + jnp.exp(logits)) * (1 - desired_labels)
-    loss_array = jnp.nan_to_num(loss_array)
-    loss = jnp.mean(loss_array)
-    return loss
+def BCE_from_logits(logits, targets):
+    p = sigmoid(logits)
+    loss_array = -jnp.log(jnp.where(p == 0, EPSILON, p)) * targets\
+                 - jnp.log(jnp.where(1-p == 0, EPSILON, 1-p)) * (1 - targets)
+    return jnp.mean(loss_array)
+
+
+def BCE(predictions, targets):
+    loss_array = -jnp.log(jnp.where(predictions == 0, EPSILON, predictions)) * targets\
+                 - jnp.log(jnp.where(1-predictions == 0, EPSILON, 1-predictions)) * (1 - targets)
+    return jnp.mean(loss_array)
 
 
 def MSE(logits, desired_values):
@@ -163,6 +170,7 @@ class GAN:
     generator and discriminator are jax.experimental.stax models: (init_func, apply_func) pairs
     optimizers are jax.experimental.optimizers optimizers: (init, update, get_params) triplets
     """
+
     @staticmethod
     def save_gan_to_file(gan, d_state, g_state, save_adr):
         params = {'d_creator': gan.d_creator,
