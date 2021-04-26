@@ -14,7 +14,7 @@ from functools import partial
 import pickle
 import os
 
-EPSILON = 1e-10
+EPSILON = 1e-20
 
 
 # ~~~~~~~~~~~~ helper functions ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -45,7 +45,7 @@ def BCE_from_logits(logits, targets):
 
 def BCE(predictions, targets):
     loss_array = -jnp.log(jnp.where(predictions == 0, EPSILON, predictions)) * targets\
-                 - jnp.log(jnp.where(1-predictions == 0, EPSILON, 1-predictions)) * (1 - targets)
+                 -jnp.log(jnp.where(1-predictions == 0, EPSILON, 1-predictions)) * (1 - targets)
     return jnp.mean(loss_array)
 
 
@@ -266,8 +266,8 @@ class GAN:
 
         fake_predictions = self.d['apply'](d_params, fake_ims)
         real_predictions = self.d['apply'](d_params, real_samples)
-        fake_loss = self.loss_function(fake_predictions, jnp.ones(len(fake_predictions)))
-        real_loss = self.loss_function(real_predictions, jnp.zeros(len(real_predictions)))
+        fake_loss = self.loss_function(fake_predictions, jnp.zeros_like(fake_predictions))
+        real_loss = self.loss_function(real_predictions, jnp.ones_like(real_predictions))
 
         return fake_loss + real_loss
 
@@ -277,10 +277,10 @@ class GAN:
 
         fake_predictions = self.d['apply'](d_params, fake_ims)
         fake_predictions = sort(fake_predictions, 0)
-        # fake_predictions = jnp.flip(fake_predictions, 0)
+        fake_predictions = jnp.flip(fake_predictions, 0)
         fake_predictions = fake_predictions[:k]
 
-        loss = self.loss_function(fake_predictions, jnp.zeros(len(fake_predictions)))
+        loss = self.loss_function(fake_predictions, jnp.ones_like(fake_predictions))
 
         return loss
 
