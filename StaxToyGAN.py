@@ -141,17 +141,27 @@ if __name__ == '__main__':
                         help="folder to save the generated plots")
     parser.add_argument("--save_adr_model_folder", required=False, default=None, type=str,
                         help="address with pkl extension to save the trained models")
-    parser.add_argument("--show_plots", required=False, default=True, type=bool,
-                        help="if true intermediate plots will show")
+    parser.add_argument("--show_plots", required=False, default=0, type=int,
+                        choices={0, 1}, help="if 1 intermediate plots will show")
 
     args = vars(parser.parse_args())
+    print("show:", args['show_plots'])
     d_losses, g_losses, d_state, g_state, gan = train(num_components=args['num_components'],
                                                       batch_size=args['batch_size'], num_iter=args['num_iter'],
                                                       dataset=args['dataset'], d_lr=args['d_lr'],
                                                       d_momentum=args['d_momentum'], d_momentum2=args['d_momentum2'],
                                                       g_lr=args['g_lr'], g_momentum=args['g_momentum'],
                                                       g_momentum2=args['g_momentum2'], top_k=args['top_k'],
-                                                      show_plots=args['show_plots'],
+                                                      show_plots=bool(args['show_plots']),
                                                       save_adr_plots_folder=args['save_adr_plots_folder'],
                                                       save_adr_model_folder=args['save_adr_model_folder']
                                                       )
+
+
+def visualize_gan_state(gan, g_state, d_state):
+    import visualizing_distributions
+    z = jax.random.normal(jax.random.PRNGKey(0), (1000, 2))
+    x, y = jnp.meshgrid(jnp.linspace(-6, 6, 100), jnp.linspace(-6, 6, 100))
+    grid = jnp.concatenate((x.reshape((x.size, 1)), y.reshape((y.size, 1))), axis=1)
+    visualizing_distributions.plot_samples_scatter(samples=grid, samples2=gan.generate_samples(z, g_state),
+                                                   samples_ratings=gan.rate_samples(grid, d_state))

@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import jax.random as random
+import jax.numpy as jnp
 
 
 def plot_sample_heatmap(samples):
@@ -30,3 +32,5 @@ def plot_samples_scatter(samples, samples2=None, save_adr=None, samples_ratings=
         plt.savefig(save_adr)
     if show:
         plt.show()
+    else:
+        plt.clf()
