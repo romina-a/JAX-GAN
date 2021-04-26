@@ -1,15 +1,16 @@
 import jax
 import jax.numpy as jnp
 from jax.experimental.optimizers import adam
-
 from jax.config import config
+
+import numpy as np
 
 import argparse
 import time
 
 from Models import mlp_generator_2d, mlp_discriminator, GAN
-from Models import BCE_from_logits, BCE, MSE
-from ToyData import get_gaussian_mixture
+from Models import BCE
+from ToyData import get_gaussian_mixture, GaussianMixture
 from visualizing_distributions import plot_samples_scatter
 from functools import partial
 
@@ -112,7 +113,9 @@ def train(num_components, variance=gaussian_variance_default,
         import matplotlib.pyplot as plt
         plt.plot(d_losses, label="d_loss", alpha=0.5)
         plt.plot(g_losses, label="d_loss", alpha=0.5)
+        plt.legend()
         plt.savefig(save_adr_model_folder+f"{num_components}-{variance}-{top_k_str}-losses.png")
+        plt.clf()
 
     return d_losses, g_losses, d_state, g_state, gan
 
@@ -162,10 +165,48 @@ if __name__ == '__main__':
                                                       )
 
 
-def visualize_gan_state(gan, g_state, d_state):
+# ------------------------------- Evaluation ----------------------------------------
+def visualize_gan_state(gan, d_state, g_state, ls_start=-6, ls_stop=6, ls_num=100):
     import visualizing_distributions
     z = jax.random.normal(jax.random.PRNGKey(0), (1000, 2))
-    x, y = jnp.meshgrid(jnp.linspace(-6, 6, 100), jnp.linspace(-6, 6, 100))
+    x, y = jnp.meshgrid(jnp.linspace(ls_start, ls_stop, ls_num), jnp.linspace(ls_start, ls_stop, ls_num))
     grid = jnp.concatenate((x.reshape((x.size, 1)), y.reshape((y.size, 1))), axis=1)
     visualizing_distributions.plot_samples_scatter(samples=grid, samples2=gan.generate_samples(z, g_state),
                                                    samples_ratings=gan.rate_samples(grid, d_state))
+
+
+def get_nearest_modes(gan, d_state, g_state, num_modes, var):
+    prng = jax.random.PRNGKey(0)
+    zprng, gprng, prng = jax.random.split(prng, 3)
+    z = jax.random.normal(zprng, (10000, 2))
+    fake_samples = np.array(gan.generate_samples(z, g_state))
+    real_samples = GaussianMixture(gprng, 10000, num_modes, var).get_next_batch()
+    modes = GaussianMixture.create_2d_mean_matrix(num_modes)
+    sd = np.sqrt(var)
+
+    mode_inds, dists = _get_nearest_modes(fake_samples, modes)
+    real_mode_inds, real_dists = _get_nearest_modes(real_samples, modes)
+    recovered_modes = np.unique(mode_inds[dists < 4 * sd])
+    high_quality_samples = mode_inds[dists < 4 * sd]
+    return mode_inds, dists, real_mode_inds, real_dists
+
+
+def _get_nearest_modes(samples, modes):
+    mode_inds = [-1 for _ in range(len(samples))]
+    dists = [-1 for _ in range(len(samples))]
+    for i, sample in enumerate(samples):
+        mode_inds[i], dists[i] = _get_nearest_mode(sample, modes)
+    return np.array(mode_inds), np.array(dists)
+
+
+def _get_nearest_mode(sample, modes):
+    dist = np.sqrt((sample[0]-modes[0][0])**2+(sample[1]-modes[0][1])**2)
+    mode_ind = 0
+    for i, mode in enumerate(modes):
+        d = np.sqrt((sample[0]-mode[0])**2+(sample[1]-mode[1])**2)
+        if d<dist:
+            dist = d
+            mode_ind = i
+    return mode_ind, dist
+
+
