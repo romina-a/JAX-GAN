@@ -21,6 +21,8 @@ def plot_samples_scatter(samples, samples2=None, samples_ratings=None, save_adr=
         cmap = cmap or 'cividis'
 
     plt.scatter(X, Y, c=samples_ratings, alpha=0.2, cmap=cmap)
+    if samples_ratings is not None:
+        plt.colorbar()
 
     if samples2 is not None:
         X2 = samples2[:, 0]
@@ -28,8 +30,6 @@ def plot_samples_scatter(samples, samples2=None, samples_ratings=None, save_adr=
 
         plt.scatter(X2, Y2, color='red', alpha=0.2)
 
-    if samples_ratings is not None:
-        plt.colorbar()
     if save_adr is not None:
         plt.savefig(save_adr)
     if show:
