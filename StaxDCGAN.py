@@ -18,21 +18,16 @@ digit_default = 0
 
 batch_size_default = 128
 num_iter_default = 2000
-digit_default = 0
-
-d_lr_default = 0.0002
-d_momentum_default = 0.5
-d_momentum2_default = 0.5
-g_lr_default = 0.0002
-g_momentum_default = 0.5
-g_momentum2_default = 0.5
-loss_function_default = BCE_from_logits
-
-batch_size_default = 128
 batch_size_min_default = 64
 decay_rate_default = 0.99
 
-num_iter_default = 10000
+d_lr_default = 0.0002
+d_momentum_default = 0.5
+d_momentum2_default = 0.99
+g_lr_default = 0.0002
+g_momentum_default = 0.5
+g_momentum2_default = 0.99
+loss_function_default = BCE_from_logits
 
 dataset_loaders = {'mnist': mnist_dataset, 'cifar10': cifar10_dataset}
 generators = {'mnist': conv_generator_mnist, 'cifar10': conv_generator_cifar10}

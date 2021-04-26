@@ -79,16 +79,16 @@ def conv_generator_mnist():
         Dense(1024 * 7 * 7),
         Reshape((7, 7, 1024)),
         ConvTranspose(out_chan=512, filter_shape=(5, 5), strides=(1, 1),
-                      padding='SAME', W_init=None, b_init=normal(1e-6)),
+                      padding='SAME', W_init=normal(2e-2), b_init=normal(2e-2)),
         Relu, BatchNorm(),
         ConvTranspose(out_chan=256, filter_shape=(5, 5), strides=(2, 2),
-                      padding='SAME', W_init=None, b_init=normal(1e-6)),
+                      padding='SAME', W_init=normal(2e-2), b_init=normal(2e-2)),
         Relu, BatchNorm(),
         ConvTranspose(out_chan=128, filter_shape=(5, 5), strides=(2, 2),
-                      padding='SAME', W_init=None, b_init=normal(1e-6)),
+                      padding='SAME', W_init=normal(2e-2), b_init=normal(2e-2)),
         Relu, BatchNorm(),
         ConvTranspose(out_chan=1, filter_shape=(5, 5), strides=(1, 1),
-                      padding='SAME', W_init=None, b_init=normal(1e-6)),
+                      padding='SAME', W_init=normal(2e-2), b_init=normal(2e-2)),
         Tanh,
     )
     return model
@@ -99,16 +99,16 @@ def conv_generator_cifar10():
         Dense(1024 * 2 * 2),
         Reshape((2, 2, 1024)),
         ConvTranspose(out_chan=512, filter_shape=(5, 5), strides=(2, 2),
-                      padding='SAME', W_init=None, b_init=normal(1e-6)),
+                      padding='SAME', W_init=normal(2e-2), b_init=normal(2e-2)),
         Relu, BatchNorm(),
         ConvTranspose(out_chan=256, filter_shape=(5, 5), strides=(2, 2),
-                      padding='SAME', W_init=None, b_init=normal(1e-6)),
+                      padding='SAME', W_init=normal(2e-2), b_init=normal(2e-2)),
         Relu, BatchNorm(),
         ConvTranspose(out_chan=128, filter_shape=(5, 5), strides=(2, 2),
-                      padding='SAME', W_init=None, b_init=normal(1e-6)),
+                      padding='SAME', W_init=normal(2e-2), b_init=normal(2e-2)),
         Relu, BatchNorm(),
         ConvTranspose(out_chan=3, filter_shape=(5, 5), strides=(2, 2),
-                      padding='SAME', W_init=None, b_init=normal(1e-6)),
+                      padding='SAME', W_init=normal(2e-2), b_init=normal(2e-2)),
         Tanh,
     )
     return model
@@ -117,18 +117,18 @@ def conv_generator_cifar10():
 def conv_discriminator():
     model = stax.serial(
         Conv(out_chan=64, filter_shape=(5, 5), strides=(2, 2),
-             padding='SAME', W_init=None, b_init=normal(1e-6)),
+             padding='SAME', W_init=normal(2e-2), b_init=normal(1e-6)),
         LeakyRelu(negative_slope=0.2),
         Conv(out_chan=128, filter_shape=(5, 5), strides=(2, 2),
-             padding='SAME', W_init=None, b_init=normal(1e-6)),
+             padding='SAME', W_init=normal(2e-2), b_init=normal(1e-6)),
         LeakyRelu(negative_slope=0.2), BatchNorm(),
         Conv(out_chan=256, filter_shape=(5, 5), strides=(2, 2),
-             padding='SAME', W_init=None, b_init=normal(1e-6)),
+             padding='SAME', W_init=normal(2e-2), b_init=normal(1e-6)),
         LeakyRelu(negative_slope=0.2), BatchNorm(),
         Conv(out_chan=512, filter_shape=(5, 5), strides=(2, 2),
-             padding='SAME', W_init=None, b_init=normal(1e-6)),
+             padding='SAME', W_init=normal(2e-2), b_init=normal(1e-6)),
         LeakyRelu(negative_slope=0.2), BatchNorm(), Flatten,
-        Dense(1)
+        Dense(1), Sigmoid
     )
     return model
 
