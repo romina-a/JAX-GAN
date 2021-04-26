@@ -12,7 +12,7 @@ def plot_sample_heatmap(samples):
     plt.show()
 
 
-def plot_samples_scatter(samples, samples2=None, save_adr=None, samples_ratings=None, samples2_ratings=None):
+def plot_samples_scatter(samples, samples2=None, save_adr=None, samples_ratings=None, samples2_ratings=None, show=True):
     X = samples[:, 0]
     Y = samples[:, 1]
 
@@ -28,4 +28,5 @@ def plot_samples_scatter(samples, samples2=None, save_adr=None, samples_ratings=
         plt.colorbar()
     if save_adr is not None:
         plt.savefig(save_adr)
-    plt.show()
+    if show:
+        plt.show()

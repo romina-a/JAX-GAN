@@ -8,7 +8,7 @@ import argparse
 import time
 
 from Models import mlp_generator_2d, mlp_discriminator, GAN
-from Models import BCE_from_logits
+from Models import BCE_from_logits, BCE, MSE
 from ToyData import get_gaussian_mixture
 from visualizing_distributions import plot_samples_scatter
 from functools import partial
@@ -30,7 +30,7 @@ d_momentum2_default = 0.99
 g_lr_default = 0.0001
 g_momentum_default = 0.9
 g_momentum2_default = 0.99
-loss_function_default = BCE_from_logits
+loss_function_default = BCE
 
 batch_size_default = 256
 batch_size_min_default = 192
@@ -58,7 +58,7 @@ def train(num_components, variance=gaussian_variance_default,
           dataset=dataset_default, loss_function=loss_function_default,
           prior_dim=prior_dim_default, d_lr=d_lr_default, d_momentum=d_momentum_default,
           d_momentum2=d_momentum2_default, g_lr=g_lr_default, g_momentum=g_momentum_default,
-          g_momentum2=g_momentum2_default, top_k=1, save_adr_plots_folder=None, save_adr_model_folder=None):
+          g_momentum2=g_momentum2_default, top_k=1, show_plots=True, save_adr_plots_folder=None, save_adr_model_folder=None):
     prng = jax.random.PRNGKey(10)
     im_shape = (2,)
     prng_to_use, prng = jax.random.split(prng, 2)
@@ -91,7 +91,8 @@ def train(num_components, variance=gaussian_variance_default,
             if save_adr_plots_folder is not None: save_adr_plot = save_adr_plots_folder + f"{num_components}-{top_k}-{i // 1000}.jpg"
             plot_samples_scatter(fakes, real_ims,
                                  save_adr=save_adr_plot,
-                                 samples_ratings=gan.rate_samples(fakes, d_state))
+                                 samples_ratings=gan.rate_samples(fakes, d_state),
+                                 show=show_plots)
             # plot_samples_scatter(gan.generate_samples(z, g_state))
         if top_k == 1 and i % 2000 == 1999:
             k = int(k * decay_rate_default)
@@ -140,6 +141,8 @@ if __name__ == '__main__':
                         help="folder to save the generated plots")
     parser.add_argument("--save_adr_model_folder", required=False, default=None, type=str,
                         help="address with pkl extension to save the trained models")
+    parser.add_argument("--show_plots", required=False, default=True, type=bool,
+                        help="if true intermediate plots will show")
 
     args = vars(parser.parse_args())
     d_losses, g_losses, d_state, g_state, gan = train(num_components=args['num_components'],
@@ -148,6 +151,7 @@ if __name__ == '__main__':
                                                       d_momentum=args['d_momentum'], d_momentum2=args['d_momentum2'],
                                                       g_lr=args['g_lr'], g_momentum=args['g_momentum'],
                                                       g_momentum2=args['g_momentum2'], top_k=args['top_k'],
+                                                      show_plots=args['show_plots'],
                                                       save_adr_plots_folder=args['save_adr_plots_folder'],
                                                       save_adr_model_folder=args['save_adr_model_folder']
                                                       )

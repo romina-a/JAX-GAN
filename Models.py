@@ -2,7 +2,7 @@ from jax.nn.initializers import normal
 from jax.nn import leaky_relu, sigmoid
 from jax.experimental import stax
 from jax.experimental.stax import (BatchNorm, Conv, ConvTranspose, Dense,
-                                   Tanh, Relu, Flatten)
+                                   Tanh, Relu, Flatten, Sigmoid)
 from jax.experimental.optimizers import pack_optimizer_state, unpack_optimizer_state
 import jax.numpy as jnp
 import jax.random as random
@@ -143,7 +143,7 @@ def mlp_discriminator():
         # BatchNorm(axis=(1,)),
         Dense(out_dim=256, W_init=normal()), Relu,
         # BatchNorm(axis=(1,)),
-        Dense(1)
+        Dense(1), Sigmoid
     )
     return model
 
