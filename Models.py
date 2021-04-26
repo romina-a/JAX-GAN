@@ -130,7 +130,8 @@ def conv_discriminator():
         Conv(out_chan=512, filter_shape=(5, 5), strides=(2, 2),
              padding='SAME', W_init=normal(2e-2), b_init=normal(1e-6)),
         BatchNorm(), LeakyRelu(negative_slope=0.2), Flatten,
-        Dense(1), Sigmoid
+        Dense(1),
+        # Sigmoid
     )
     return model
 
@@ -145,7 +146,8 @@ def mlp_discriminator():
         # BatchNorm(axis=(1,)),
         Dense(out_dim=256), Relu,
         # BatchNorm(axis=(1,)),
-        Dense(1), Sigmoid
+        Dense(1),
+        # Sigmoid
     )
     return model
 

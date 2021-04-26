@@ -8,7 +8,7 @@ import time
 from functools import partial
 
 from Models import conv_generator_mnist, conv_generator_cifar10, conv_discriminator, GAN
-from Models import BCE
+from Models import BCE_from_logits
 from dataset_loader import get_NumpyLoader_mnist as mnist_dataset
 from dataset_loader import get_NumpyLoader_cifar10 as cifar10_dataset
 
@@ -27,7 +27,7 @@ d_momentum2_default = 0.99
 g_lr_default = 0.0002
 g_momentum_default = 0.5
 g_momentum2_default = 0.99
-loss_function_default = BCE
+loss_function_default = BCE_from_logits
 
 dataset_loaders = {'mnist': mnist_dataset, 'cifar10': cifar10_dataset}
 generators = {'mnist': conv_generator_mnist, 'cifar10': conv_generator_cifar10}

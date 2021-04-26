@@ -9,7 +9,7 @@ import argparse
 import time
 
 from Models import mlp_generator_2d, mlp_discriminator, GAN
-from Models import BCE
+from Models import BCE_from_logits
 from ToyData import get_gaussian_mixture, GaussianMixture
 from visualizing_distributions import plot_samples_scatter
 from functools import partial
@@ -31,7 +31,7 @@ d_momentum2_default = 0.99
 g_lr_default = 0.0001
 g_momentum_default = 0.9
 g_momentum2_default = 0.99
-loss_function_default = BCE
+loss_function_default = BCE_from_logits
 
 batch_size_default = 256
 batch_size_min_default = 192
