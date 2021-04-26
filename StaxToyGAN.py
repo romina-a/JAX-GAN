@@ -88,7 +88,7 @@ def train(num_components, variance=gaussian_variance_default,
             prev_time = time.time()
             fakes = gan.generate_samples(z, g_state)
             save_adr_plot = None
-            if save_adr_plots_folder is not None: save_adr_plot = save_adr_plots_folder + f"{num_components}-{top_k}-{i // 1000}.jpg"
+            if save_adr_plots_folder is not None: save_adr_plot = save_adr_plots_folder + f"{num_components}-{top_k}-{i // 1000}.png"
             plot_samples_scatter(fakes, real_ims,
                                  save_adr=save_adr_plot,
                                  samples_ratings=gan.rate_samples(fakes, d_state),
@@ -109,6 +109,10 @@ def train(num_components, variance=gaussian_variance_default,
     if save_adr_model_folder is not None:
         top_k_str = "topk" if top_k == 1 else "notopk"
         gan.save_gan_to_file(gan, d_state, g_state, save_adr_model_folder+f"{num_components}-{variance}-{top_k_str}.pkl")
+        import matplotlib.pyplot as plt
+        plt.plot(d_losses, label="d_loss", alpha=0.5)
+        plt.plot(g_losses, label="d_loss", alpha=0.5)
+        plt.savefig(save_adr_model_folder+f"{num_components}-{variance}-{top_k_str}-losses.png")
 
     return d_losses, g_losses, d_state, g_state, gan
 

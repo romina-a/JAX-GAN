@@ -66,7 +66,8 @@ def create_and_initialize_gan(prng, d_lr, d_momentum, d_momentum2, g_lr, g_momen
     return gan, d_state, g_state
 
 
-def train(batch_size=batch_size_default, num_iter=num_iter_default, digit=digit_default, dataset=dataset_default, loss_function=loss_function_default,
+def train(batch_size=batch_size_default, num_iter=num_iter_default, digit=digit_default, dataset=dataset_default,
+          loss_function=loss_function_default,
           d_lr=d_lr_default, d_momentum=d_momentum_default, d_momentum2=d_momentum2_default,
           g_lr=g_lr_default, g_momentum=g_momentum_default, g_momentum2=g_momentum2_default,
           save_adr_plots_folder=None, save_adr_model=None, show_plots=True,
@@ -106,14 +107,22 @@ def train(batch_size=batch_size_default, num_iter=num_iter_default, digit=digit_
             g_losses.append(g_loss_value)
             i = i + 1
         print(f'epoch finished in {time.time() - epoch_start_time}')
-        plot_samples(gan.generate_samples(z, g_state), 3, save_adr=save_adr_plots_folder+f"-{top_k}-{i}.jpg")
+        save_adr = None
+        if save_adr_plots_folder is not None:
+            save_adr = save_adr_plots_folder+f"-{dataset}-{top_k}-{i}.png"
+        plot_samples(gan.generate_samples(z, g_state), 3,
+                     save_adr=save_adr, show_plots=show_plots)
         if top_k == 1:
             k = int(k * decay_rate_default)
             k = max(batch_size_min_default, k)
             print(f"iter:{i}/{num_iter}, updated k: {k}")
     print(f'finished, took{time.time() - start_time}')
     if save_adr_model is not None:
-        gan.save_gan_to_file(gan, d_state, g_state, save_adr_model+f"-{top_k}-{dataset}.pkl")
+        gan.save_gan_to_file(gan, d_state, g_state, save_adr_model+f"GAN-{dataset}-{top_k}.pkl")
+        import matplotlib.pyplot as plt
+        plt.plot(d_losses, label="d_loss", alpha=0.5)
+        plt.plot(g_losses, label="d_loss", alpha=0.5)
+        plt.savefig(save_adr_model+f"{dataset}-{top_k}-losses.png")
     return d_losses, g_losses, d_state, g_state, gan
 
 
@@ -139,6 +148,14 @@ if __name__ == '__main__':
                         help="generator momentum")
     parser.add_argument("--g_momentum2", required=False, default=g_momentum2_default, type=jnp.float32,
                         help="generator second momentum")
+    parser.add_argument("--save_adr_plots_folder", required=False, default=None, type=str,
+                        help="if not None, intermediate images will be saved")
+    parser.add_argument("--save_adr_model", required=False, default=None, type=str,
+                        help="if not None, final models will be saved")
+    parser.add_argument("--show_plots", required=False, default=1, type=int,
+                        choices={0, 1}, help="if 1, intermediate images will show")
+    parser.add_argument("--top_k", required=False, default=1, type=int,
+                        choices={0, 1}, help="if 1, top-k will be used")
 
     args = vars(parser.parse_args())
     train(
@@ -148,4 +165,8 @@ if __name__ == '__main__':
         dataset=args['dataset'],
         d_lr=args['d_lr'], d_momentum=args['d_momentum'], d_momentum2=args['d_momentum2'],
         g_lr=args['g_lr'], g_momentum=args['g_momentum'], g_momentum2=args['g_momentum2'],
+        save_adr_plots_folder=args['save_adr_plots_folder'],
+        save_adr_model=args['save_adr_model'],
+        show_plots=args['show_plots'],
+        top_k=args['top_k']
     )

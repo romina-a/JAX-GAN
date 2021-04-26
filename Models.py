@@ -266,8 +266,8 @@ class GAN:
 
         fake_predictions = self.d['apply'](d_params, fake_ims)
         real_predictions = self.d['apply'](d_params, real_samples)
-        fake_loss = self.loss_function(fake_predictions, jnp.zeros(len(fake_predictions)))
-        real_loss = self.loss_function(real_predictions, jnp.ones(len(real_predictions)))
+        fake_loss = self.loss_function(fake_predictions, jnp.ones(len(fake_predictions)))
+        real_loss = self.loss_function(real_predictions, jnp.zeros(len(real_predictions)))
 
         return fake_loss + real_loss
 
@@ -277,10 +277,10 @@ class GAN:
 
         fake_predictions = self.d['apply'](d_params, fake_ims)
         fake_predictions = sort(fake_predictions, 0)
-        fake_predictions = jnp.flip(fake_predictions, 0)
+        # fake_predictions = jnp.flip(fake_predictions, 0)
         fake_predictions = fake_predictions[:k]
 
-        loss = self.loss_function(fake_predictions, jnp.ones(len(fake_predictions)))
+        loss = self.loss_function(fake_predictions, jnp.zeros(len(fake_predictions)))
 
         return loss
 
