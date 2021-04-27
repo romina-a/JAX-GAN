@@ -17,7 +17,7 @@ dataset_default = 'mnist'
 digit_default = 0
 
 batch_size_default = 128
-num_iter_default = 10000
+num_iter_default = 20000
 batch_size_min_default = 64
 decay_rate_default = 0.99
 

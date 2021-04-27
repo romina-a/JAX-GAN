@@ -1,6 +1,6 @@
 import jax
 import jax.numpy as jnp
-from jax.experimental.optimizers import adam, momentum
+from jax.experimental.optimizers import adam
 from jax.config import config
 
 import numpy as np
@@ -21,6 +21,7 @@ config.update("jax_debug_nans", True)
 
 # ~~~~~~~~~~~ Stax GAN ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 dataset_default = 'gaussian_mixture'
+seed_default = 10
 num_components_default = 25
 gaussian_variance_default = 0.0025
 prior_dim_default = 2
@@ -59,19 +60,21 @@ def train(num_components, variance=gaussian_variance_default,
           dataset=dataset_default, loss_function=loss_function_default,
           prior_dim=prior_dim_default, d_lr=d_lr_default, d_momentum=d_momentum_default,
           d_momentum2=d_momentum2_default, g_lr=g_lr_default, g_momentum=g_momentum_default,
-          g_momentum2=g_momentum2_default, top_k=1, show_plots=True, save_adr_plots_folder=None, save_adr_model_folder=None):
-    prng = jax.random.PRNGKey(10)
+          g_momentum2=g_momentum2_default, top_k=1,
+          show_plots=True,
+          save_adr_plots_folder=None,
+          save_adr_model_folder=None,
+          save_intermediate=True,
+          seed=seed_default
+          ):
+    prng = jax.random.PRNGKey(seed)
     im_shape = (2,)
     prng_to_use, prng = jax.random.split(prng, 2)
     gan, d_state, g_state = create_and_initialize_gan(prng_to_use,
                                                       d_lr, d_momentum, d_momentum2,
                                                       g_lr, g_momentum, g_momentum2,
                                                       loss_function, im_shape, (prior_dim,), batch_size)
-    if num_iter < num_iter_default:
-        data = get_gaussian_mixture(batch_size, num_iter_default, num_components, variance)
-        data = data[:num_iter]
-    else:
-        data = get_gaussian_mixture(batch_size, num_iter, num_components, variance)
+    data = get_gaussian_mixture(batch_size, num_iter, num_components, variance)
 
 
     d_losses = []
@@ -84,6 +87,7 @@ def train(num_components, variance=gaussian_variance_default,
     prev_time = time.time()
     k = batch_size
     for i, real_ims in enumerate(data):
+        # print info and show results
         if i % 1000 == 0:
             print(f"{i}/{num_iter} took {time.time() - prev_time}")
             prev_time = time.time()
@@ -95,17 +99,28 @@ def train(num_components, variance=gaussian_variance_default,
                                  samples_ratings=gan.rate_samples(fakes, d_state),
                                  show=show_plots)
             # plot_samples_scatter(gan.generate_samples(z, g_state))
+        # save the model in the middle of training for gradient analysis
+        if save_intermediate and save_adr_model_folder is not None and i == num_iter//2:
+            top_k_str = "topk" if top_k == 1 else "notopk"
+            gan.save_gan_to_file(gan, d_state, g_state,
+                                 save_adr_model_folder + f"{num_components}-{variance}-{top_k_str}-intermediate.pkl")
+
+        # ------------- actual training starts -----------------------------
+        # decay k
         if top_k == 1 and i % 2000 == 1999:
             k = int(k * decay_rate_default)
             k = max(batch_size_min_default, k)
             print(f"iter:{i}/{num_iter}, updated k: {k}")
 
+        # train one step
         prng, prng_to_use = jax.random.split(prng, 2)
-
         d_state, g_state, d_loss_value, g_loss_value = gan.train_step(i, prng_to_use, d_state, g_state, real_ims, k)
+        # ------------- actual training ends --------------------------------
 
+        # keep the iteration loss
         d_losses.append(d_loss_value)
         g_losses.append(g_loss_value)
+
     print(f'finished, took{time.time() - start_time}')
     if save_adr_model_folder is not None:
         top_k_str = "topk" if top_k == 1 else "notopk"
@@ -150,6 +165,8 @@ if __name__ == '__main__':
                         help="address with pkl extension to save the trained models")
     parser.add_argument("--show_plots", required=False, default=0, type=int,
                         choices={0, 1}, help="if 1 intermediate plots will show")
+    parser.add_argument("--save_intermediate", required=False, default=0, type=int,
+                        choices={0, 1}, help="if 1 intermediate gan will be saved")
 
     args = vars(parser.parse_args())
     print("show:", args['show_plots'])
@@ -161,6 +178,7 @@ if __name__ == '__main__':
                                                       g_momentum2=args['g_momentum2'], top_k=args['top_k'],
                                                       show_plots=bool(args['show_plots']),
                                                       save_adr_plots_folder=args['save_adr_plots_folder'],
-                                                      save_adr_model_folder=args['save_adr_model_folder']
+                                                      save_adr_model_folder=args['save_adr_model_folder'],
+                                                      save_intermediate=args['save_intermediate']
                                                       )
 

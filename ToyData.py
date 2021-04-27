@@ -76,6 +76,7 @@ class GaussianMixture(DataLoader):
 def get_gaussian_mixture(batch_size, num_iters, components, variance, seed=SEED_DEFAULT,
                          save=True, from_file=True):
     prng = random.PRNGKey(seed)
+
     path = f"./ToyData/GaussianMixture-{components}-{variance}-{batch_size}-{num_iters}.npy"
     if os.path.exists(path) and from_file:
         print("file exists")
