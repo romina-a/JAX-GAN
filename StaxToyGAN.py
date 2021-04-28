@@ -64,7 +64,7 @@ def train(num_components, variance=gaussian_variance_default,
           show_plots=True,
           save_adr_plots_folder=None,
           save_adr_model_folder=None,
-          save_intermediate=True,
+          save_intermediate=1,
           seed=seed_default
           ):
     prng = jax.random.PRNGKey(seed)
@@ -75,7 +75,6 @@ def train(num_components, variance=gaussian_variance_default,
                                                       g_lr, g_momentum, g_momentum2,
                                                       loss_function, im_shape, (prior_dim,), batch_size)
     data = get_gaussian_mixture(batch_size, num_iter, num_components, variance)
-
 
     d_losses = []
     g_losses = []
@@ -101,6 +100,7 @@ def train(num_components, variance=gaussian_variance_default,
             # plot_samples_scatter(gan.generate_samples(z, g_state))
         # save the model in the middle of training for gradient analysis
         if save_intermediate and save_adr_model_folder is not None and i == num_iter//2:
+            print("saving intermediate")
             top_k_str = "topk" if top_k == 1 else "notopk"
             gan.save_gan_to_file(gan, d_state, g_state,
                                  save_adr_model_folder + f"{num_components}-{variance}-{top_k_str}-intermediate.pkl")
@@ -165,8 +165,10 @@ if __name__ == '__main__':
                         help="address with pkl extension to save the trained models")
     parser.add_argument("--show_plots", required=False, default=0, type=int,
                         choices={0, 1}, help="if 1 intermediate plots will show")
-    parser.add_argument("--save_intermediate", required=False, default=0, type=int,
+    parser.add_argument("--save_intermediate", required=False, default=1, type=int,
                         choices={0, 1}, help="if 1 intermediate gan will be saved")
+    parser.add_argument("--seed", required=False, default=seed_default, type=int,
+                        help="training seed")
 
     args = vars(parser.parse_args())
     print("show:", args['show_plots'])
@@ -179,6 +181,7 @@ if __name__ == '__main__':
                                                       show_plots=bool(args['show_plots']),
                                                       save_adr_plots_folder=args['save_adr_plots_folder'],
                                                       save_adr_model_folder=args['save_adr_model_folder'],
-                                                      save_intermediate=args['save_intermediate']
+                                                      save_intermediate=args['save_intermediate'],
+                                                      seed=args['seed']
                                                       )
 
