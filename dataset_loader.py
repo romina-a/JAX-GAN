@@ -1,7 +1,7 @@
 import numpy as np
 import jax.numpy as jnp
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~ UTILS FOR LOADING MNIST WITH PYTORCH ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~ UTILS FOR LOADING DATA WITH PYTORCH ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 from torch.utils import data
 from torchvision.datasets import MNIST, CIFAR10
 
@@ -71,43 +71,3 @@ def get_NumpyLoader_cifar10(batch_size, digit=None):
     # load training with the generator (makes batch easier I think)
     training_generator = NumpyLoader(cifar10_dataset, batch_size=batch_size, num_workers=0)
     return training_generator
-
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~ UTILS FOR LOADING DATA WITH TF ~~~~~~~~~~~~~~~~~
-import tensorflow_datasets as tfds
-import tensorflow as tf
-
-
-def make_mnist_dataset(batch_size, seed=1, digit=None):
-    mnist = tfds.load("mnist")
-
-    def _preprocess(sample):
-        image = tf.image.convert_image_dtype(sample["image"], tf.float32)
-        image = tf.image.resize(image, (32, 32))
-        return 2.0 * image - 1.0
-
-    ds = mnist["train"]
-    if digit is not None:
-        ds = ds.filter(lambda fd: fd['label'] == digit)
-    ds = ds.map(map_func=_preprocess,
-                num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    # ds = ds.shuffle(10 * batch_size, seed=seed).repeat().batch(batch_size)
-    ds = ds.repeat().batch(batch_size)
-    return iter(tfds.as_numpy(ds))
-
-
-def make_cifar10_dataset(batch_size, seed=1, digit=None):
-    cifar10 = tfds.load("cifar10")
-
-    def _preprocess(sample):
-        image = tf.image.convert_image_dtype(sample["image"], tf.float32)
-        image = tf.image.resize(image, (32, 32))
-        return 2.0 * image - 1.0
-
-    ds = cifar10["train"]
-    if digit is not None:
-        ds = ds.filter(lambda fd: fd['label'] == digit)
-    ds = ds.map(map_func=_preprocess,
-                num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    ds = ds.shuffle(10 * batch_size, seed=seed).repeat().batch(batch_size)
-    return iter(tfds.as_numpy(ds))
