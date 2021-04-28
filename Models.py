@@ -277,6 +277,16 @@ class GAN:
 
     @partial(jit, static_argnums=(0, 4))
     def _g_loss(self, g_params, d_params, z, k):
+        """
+        TODO: What is a smart way to make negative k be bottom-k update?
+            -using abs: jit error
+            -multiply by sign of k?
+        :param g_params:
+        :param d_params:
+        :param z:
+        :param k:
+        :return:
+        """
         fake_ims = self.g['apply'](g_params, z)
 
         fake_predictions = self.d['apply'](d_params, fake_ims)

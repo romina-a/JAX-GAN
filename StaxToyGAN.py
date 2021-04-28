@@ -10,7 +10,7 @@ import time
 
 from Models import mlp_generator_2d, mlp_discriminator, GAN
 from Models import BCE_from_logits
-from ToyData import get_gaussian_mixture, GaussianMixture
+from ToyData import get_gaussian_mixture, get_circular
 from ToyGAN_eval_vis import plot_samples_scatter
 from functools import partial
 
@@ -39,6 +39,8 @@ batch_size_min_default = 192
 decay_rate_default = 0.99
 
 num_iter_default = 100000
+
+datasets = {'gaussian_mixture':get_gaussian_mixture, 'circle': get_circular}
 
 
 def create_and_initialize_gan(prng, d_lr, d_momentum, d_momentum2, g_lr, g_momentum, g_momentum2, loss_function,
@@ -74,7 +76,7 @@ def train(num_components, variance=gaussian_variance_default,
                                                       d_lr, d_momentum, d_momentum2,
                                                       g_lr, g_momentum, g_momentum2,
                                                       loss_function, im_shape, (prior_dim,), batch_size)
-    data = get_gaussian_mixture(batch_size, num_iter, num_components, variance)
+    data = datasets[dataset](batch_size, num_iter, num_components, variance)
 
     d_losses = []
     g_losses = []
@@ -92,7 +94,7 @@ def train(num_components, variance=gaussian_variance_default,
             prev_time = time.time()
             fakes = gan.generate_samples(z, g_state)
             save_adr_plot = None
-            if save_adr_plots_folder is not None: save_adr_plot = save_adr_plots_folder + f"{num_components}-{top_k}-{i // 1000}.png"
+            if save_adr_plots_folder is not None: save_adr_plot = save_adr_plots_folder + f"{dataset}-{num_components}-{top_k}-{i // 1000}.png"
             plot_samples_scatter(fakes, real_ims,
                                  save_adr=save_adr_plot,
                                  samples_ratings=gan.rate_samples(fakes, d_state),
@@ -103,7 +105,7 @@ def train(num_components, variance=gaussian_variance_default,
             print("saving intermediate")
             top_k_str = "topk" if top_k == 1 else "notopk"
             gan.save_gan_to_file(gan, d_state, g_state,
-                                 save_adr_model_folder + f"{num_components}-{variance}-{top_k_str}-intermediate.pkl")
+                                 save_adr_model_folder + f"{dataset}-{num_components}-{variance}-{top_k_str}-intermediate.pkl")
 
         # ------------- actual training starts -----------------------------
         # decay k
@@ -124,12 +126,12 @@ def train(num_components, variance=gaussian_variance_default,
     print(f'finished, took{time.time() - start_time}')
     if save_adr_model_folder is not None:
         top_k_str = "topk" if top_k == 1 else "notopk"
-        gan.save_gan_to_file(gan, d_state, g_state, save_adr_model_folder+f"{num_components}-{variance}-{top_k_str}.pkl")
+        gan.save_gan_to_file(gan, d_state, g_state, save_adr_model_folder+f"{dataset}-{num_components}-{variance}-{top_k_str}.pkl")
         import matplotlib.pyplot as plt
         plt.plot(d_losses, label="d_loss", alpha=0.5)
         plt.plot(g_losses, label="d_loss", alpha=0.5)
         plt.legend()
-        plt.savefig(save_adr_model_folder+f"{num_components}-{variance}-{top_k_str}-losses.png")
+        plt.savefig(save_adr_model_folder+f"{dataset}-{num_components}-{variance}-{top_k_str}-losses.png")
         plt.clf()
 
     return d_losses, g_losses, d_state, g_state, gan
@@ -143,8 +145,6 @@ if __name__ == '__main__':
                         help="training batch size")
     parser.add_argument("--num_iter", required=False, default=num_iter_default, type=int,
                         help="number of iterations")
-    parser.add_argument("--dataset", required=False, default=dataset_default, type=str,
-                        choices={'gaussian_mixture'}, help="the dataset for training")
     parser.add_argument("--num_components", required=False, default=num_components_default, type=int,
                         help="number of gaussian components")
     parser.add_argument("--d_lr", required=False, default=d_lr_default, type=jnp.float32,
@@ -169,6 +169,8 @@ if __name__ == '__main__':
                         choices={0, 1}, help="if 1 intermediate gan will be saved")
     parser.add_argument("--seed", required=False, default=seed_default, type=int,
                         help="training seed")
+    parser.add_argument("--dataset", required=False, default=dataset_default, type=str,
+                        choices={'gaussian_mixture', 'circle'}, help="training seed")
 
     args = vars(parser.parse_args())
     print("show:", args['show_plots'])

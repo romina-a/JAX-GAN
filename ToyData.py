@@ -73,6 +73,33 @@ class GaussianMixture(DataLoader):
         return batches
 
 
+class Circular(DataLoader):
+    @staticmethod
+    def create_radius_array(num_circles):
+        return np.array([i+1 for i in range(num_circles)])
+
+    def __init__(self, prng, batch_size, num_circles, variance):
+        self.prng = prng
+        self.batch_size = batch_size
+        self.num_circles = num_circles
+        self.radius_array = self.create_radius_array(num_circles)
+        self.variance = variance
+
+    # TODO solve the numer of samples from each circle must be relational to radius^2
+    def get_next_batch(self):
+        self.prng, counts_key, shuffle_key, noise_key, unif_key = random.split(self.prng,5)
+
+        rads = random.randint(counts_key, (self.batch_size, 1), 0, len(self.radius_array))
+        rads = np.take(self.radius_array, rads)
+        noise = random.normal(noise_key, (self.batch_size, 1), jnp.float32) * np.sqrt(self.variance)
+        rads = rads+noise
+        degs = random.uniform(unif_key, (self.batch_size, 1), jnp.float32, 0, 2 * jnp.pi)
+        batch = np.concatenate([np.sin(degs), np.cos(degs)], axis=1)
+        batch = batch * rads
+        batch = batch[random.permutation(shuffle_key, len(batch)), ]
+        return batch
+
+
 def get_gaussian_mixture(batch_size, num_iters, components, variance, seed=SEED_DEFAULT,
                          save=True, from_file=True):
     prng = random.PRNGKey(seed)
@@ -88,3 +115,24 @@ def get_gaussian_mixture(batch_size, num_iters, components, variance, seed=SEED_
         if save:
             np.save(path, data)
     return data
+
+
+def get_circular(batch_size, num_iters, circles, variance, seed=SEED_DEFAULT,
+                         save=True, from_file=True):
+    prng = random.PRNGKey(seed)
+
+    if batch_size*num_iters < 256*100000:
+        path = f"./ToyData/Circular-{circles}-{variance}-{256}-{100000}.npy"
+    else:
+        path = f"./ToyData/Circular-{circles}-{variance}-{batch_size}-{num_iters}.npy"
+    if os.path.exists(path) and from_file:
+        print("file exists")
+        data = np.load(path)
+    else:
+        print("file didn't exist, creating")
+        dl = Circular(prng, max(batch_size*num_iters, 256*100000), circles, variance)
+        data = dl.get_next_batch()
+        if save:
+            np.save(path, data)
+    data = data[:batch_size*num_iters]
+    return np.reshape(data, (num_iters, batch_size, 2))

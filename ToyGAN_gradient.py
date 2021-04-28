@@ -6,10 +6,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import ToyGAN_eval_vis
 import ToyData
+import argparse
 
 
 def adjusted_gan_train_step(i, d_z, g_z, real_samples, gan, d_state, g_state):
     """
+    Alternative gradient update to handle bottom k approahc.
+    Because it is not jitted, it is slower than the GAN's method
+    (This method could be included in the GAN class, however I felt it will cause confusion)
 
     :param i: train step
     :param d_z: latent variables for discriminator step
