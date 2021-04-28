@@ -63,7 +63,7 @@ def perform_update(prng, gan_path, num_modes, var, train_step, num_steps, gradie
 
 
 def perform_analysis(gan_path, num_modes, var, train_step=50000, num_steps=1, seed=0,
-                     gradient_samples=10000, visualization_samples=10000):
+                     gradient_samples=10000, visualization_samples=10000, path="./"):
     prng = random.PRNGKey(seed)
     prng_train, prng_z, prng = random.split(prng, 3)
     gan, d_state, g_state = GAN.load_gan_from_file(gan_path)
@@ -99,7 +99,7 @@ def perform_analysis(gan_path, num_modes, var, train_step=50000, num_steps=1, se
     # plt.gca().axis([-0.3, 0.3, -0.3, 0.3])
     plt.gca().set_title('samples after bottom update')
     plt.tight_layout()
-    plt.savefig("./output_ims/position_separate.png")
+    plt.savefig(path+"position_separate.png")
     plt.show()
 
     plt.scatter(s[:, 0], s[:, 1], s=2, alpha=0.2, label="before")
@@ -107,7 +107,7 @@ def perform_analysis(gan_path, num_modes, var, train_step=50000, num_steps=1, se
     plt.scatter(s_bottom[:, 0], s_bottom[:, 1], s=2, alpha=0.2, label="bottom")
     plt.gca().axis([-0.3, 0.3, -0.3, 0.3])
     plt.legend()
-    plt.savefig("./output_ims/position.png")
+    plt.savefig(path+"position.png")
     plt.show()
 
     dif1 = np.array(dists - dists_top)
@@ -131,12 +131,36 @@ def perform_analysis(gan_path, num_modes, var, train_step=50000, num_steps=1, se
                               sum(dif2[(dists > 4 * sd)])])
     plt.gca().set_title('change in distance with bottom update')
     plt.tight_layout()
-    plt.savefig("./output_ims/dist.png")
+    plt.savefig(path+"dist.png")
     plt.show()
 
     return dists, dists_top, dists_bottom
 
 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--path_to_gan", required=True, type=str, help="path to the GAN pickle file")
+    parser.add_argument("--num_components", required=True, type=int, help="number of modes of the data the GAN is "
+                                                                          "trained on")
+    parser.add_argument("--variance", required=True, type=float, help="the variance of the data the GAN is trained on")
+    parser.add_argument("--seed", required=False, default=0, type=int, help="seed for generating test data")
+    parser.add_argument("--train_step", required=False, type=int, default=50000, help="models' last train update")
+    parser.add_argument("--num_steps", required=False, type=int, default=1,
+                        help="number of bottom and top k gradient updates to perform")
+    parser.add_argument("--gradient_samples", required=False, type=int, default=10000,
+                        help="number of samples to perform gradient updates with")
+    parser.add_argument("--visualization_samples", required=False, type=int, default=10000,
+                        help="number of samples for visualization and analysis")
+    parser.add_argument("--save_path", required=False, type=str,
+                        help="Folder to save the plots")
+
+    args = vars(parser.parse_args())
+    gan, d_state, g_state = GAN.load_gan_from_file(args['path_to_gan'])
+    perform_analysis(gan_path=args['gan_path'], num_modes=args['num_components'], var=args['variance'],
+                     train_step=args['train_step'], num_steps=args['num_steps'], seed=args['seed'],
+                     gradient_samples=args['gradient_samples'],
+                     visualization_samples=args['visualization_samples'],
+                     path=args['save_path'])
 
 
 
