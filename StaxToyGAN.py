@@ -3,8 +3,6 @@ import jax.numpy as jnp
 from jax.experimental.optimizers import adam
 from jax.config import config
 
-import numpy as np
-
 import argparse
 import time
 
@@ -58,7 +56,9 @@ def create_and_initialize_gan(prng, d_lr, d_momentum, d_momentum2, g_lr, g_momen
 
 
 def train(num_components, variance=gaussian_variance_default,
-          batch_size=batch_size_default, num_iter=num_iter_default,
+          batch_size=batch_size_default,
+          num_iter=num_iter_default,
+          batch_size_min=batch_size_min_default,
           dataset=dataset_default, loss_function=loss_function_default,
           prior_dim=prior_dim_default, d_lr=d_lr_default, d_momentum=d_momentum_default,
           d_momentum2=d_momentum2_default, g_lr=g_lr_default, g_momentum=g_momentum_default,
@@ -111,7 +111,7 @@ def train(num_components, variance=gaussian_variance_default,
         # decay k
         if top_k == 1 and i % 2000 == 1999:
             k = int(k * decay_rate_default)
-            k = max(batch_size_min_default, k)
+            k = max(batch_size_min, k)
             print(f"iter:{i}/{num_iter}, updated k: {k}")
 
         # train one step
@@ -143,6 +143,8 @@ if __name__ == '__main__':
                         choices={1, 0}, help="1: use top-k, 0: no top-k")
     parser.add_argument("--batch_size", required=False, default=batch_size_default, type=int,
                         help="training batch size")
+    parser.add_argument("--batch_size_min", required=False, default=batch_size_min_default, type=int,
+                        help="training batch size min")
     parser.add_argument("--num_iter", required=False, default=num_iter_default, type=int,
                         help="number of iterations")
     parser.add_argument("--num_components", required=False, default=num_components_default, type=int,
@@ -184,6 +186,7 @@ if __name__ == '__main__':
                                                       save_adr_plots_folder=args['save_adr_plots_folder'],
                                                       save_adr_model_folder=args['save_adr_model_folder'],
                                                       save_intermediate=args['save_intermediate'],
-                                                      seed=args['seed']
+                                                      seed=args['seed'],
+                                                      batch_size_min=args['batch_size_min']
                                                       )
 

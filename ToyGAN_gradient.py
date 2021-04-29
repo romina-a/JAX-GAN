@@ -9,7 +9,7 @@ import ToyData
 import argparse
 
 
-def adjusted_gan_train_step(i, d_z, g_z, real_samples, gan, d_state, g_state,):
+def adjusted_gan_train_step(i, d_z, g_z, real_samples, gan, d_state, g_state, ):
     """
     Alternative gradient update to handle bottom k approach. --> doesn't forward on bottom k samples
     (does not randomly choose samples from the latent space)

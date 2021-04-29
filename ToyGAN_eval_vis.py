@@ -2,9 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import jax
 import jax.numpy as jnp
+from jax.nn import sigmoid
 
 from Models import GAN
-from ToyData import GaussianMixture
+from ToyData import GaussianMixture, Circular
 import argparse
 
 
@@ -44,26 +45,34 @@ def plot_samples_scatter(samples, samples2=None, samples_ratings=None, save_adr=
         plt.clf()
 
 
-# ---------------------------- Evaluation -------------------------------
-def visualize_gan_state(gan, d_state, g_state, ls_start=-6, ls_stop=6, ls_num=100):
+def visualize_gan_state(gan, d_state, g_state, ls_start=-6, ls_stop=6, ls_num=100, apply_sigmoid=True, plot_gen=True):
     z = jax.random.normal(jax.random.PRNGKey(0), (1000, 2))
     x, y = jnp.meshgrid(jnp.linspace(ls_start, ls_stop, ls_num), jnp.linspace(ls_start, ls_stop, ls_num))
     grid = jnp.concatenate((x.reshape((x.size, 1)), y.reshape((y.size, 1))), axis=1)
-    plot_samples_scatter(samples=grid, samples2=gan.generate_samples(z, g_state),
-                         samples_ratings=gan.rate_samples(grid, d_state))
+    ratings = gan.rate_samples(grid, d_state)
+    if apply_sigmoid:
+        ratings = sigmoid(ratings)
+    if plot_gen:
+        plot_samples_scatter(samples=grid, samples2=gan.generate_samples(z, g_state),
+                             samples_ratings=ratings)
+    else:
+        plot_samples_scatter(samples=grid, samples_ratings=ratings)
 
 
-def evaluate_gan(gan, d_state, g_state, num_modes, var, seed=0):
+# ---------------------------- Gaussian Mixture Evaluation -------------------------------
+def _get_z(num, seed):
     prng = jax.random.PRNGKey(seed)
-    zprng, gprng, prng = jax.random.split(prng, 3)
-    z = jax.random.normal(zprng, (10000, 2))
+    z = jax.random.normal(prng, (num, 2))
+    return z
+
+
+def evaluate_gan_gaussian(gan, d_state, g_state, num_modes, var, seed=0):
+    z = _get_z(10000, seed)
     fake_samples = np.array(gan.generate_samples(z, g_state))
-    # real_samples = GaussianMixture(gprng, 10000, num_modes, var).get_next_batch()
     modes = GaussianMixture.create_2d_mean_matrix(num_modes)
     sd = np.sqrt(var)
 
     mode_inds, dists = _get_nearest_modes(fake_samples, modes)
-    # real_mode_inds, real_dists = _get_nearest_modes(real_samples, modes)
     recovered_modes = np.unique(mode_inds[dists < 4 * sd])
     high_quality_samples = mode_inds[dists < 4 * sd]
     print(f"num of recovered modes:{len(recovered_modes)}")
@@ -77,6 +86,7 @@ def evaluate_gan(gan, d_state, g_state, num_modes, var, seed=0):
 
     mode, counts = np.unique(mode_inds[dists <= 0.2], return_counts=True)
     plt.bar(mode, counts)
+    plt.savefig("./distribution-of-high-quality-samples-per-mode")
     plt.show()
 
     return mode_inds, dists
@@ -101,6 +111,27 @@ def _get_nearest_mode(sample, modes):
     return mode_ind, dist
 
 
+# ---------------------------- Circles Evaluation -----------------------------------------
+
+def evaluate_gan_circular(gan, d_state, g_state, num_circles, var, seed, ):
+    z = _get_z(10000, seed)
+    fake_samples = np.array(gan.generate_samples(z, g_state))
+    sd = np.sqrt(var)
+    data_rads = Circular.create_radius_array(num_circles)
+    sample_rads = np.sqrt(fake_samples[:, 0] ** 2 + fake_samples[:, 1] ** 2)
+
+    temp = np.array([np.abs(r - data_rads) for r in sample_rads])
+    mode_ids = np.argmin(temp, 1)
+    dists = np.array([np.abs(r - data_rads[mode_ids[i]]) for i, r in enumerate(sample_rads)])
+
+    samples_degs = np.arctan2(fake_samples[:, 1], fake_samples[:, 0])
+
+    print(f"high guality samples:{len(dists[dists < 4 * sd]) / len(dists) * 100} %")
+
+    m, c = np.unique(mode_ids[dists < 4 * sd], return_counts=True)
+    print(f"count ratio per circle:{[count / np.min(c) for count in c]}")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--path_to_gan", required=True, type=str, help="path to the GAN pickle file")
@@ -108,10 +139,17 @@ if __name__ == "__main__":
                                                                           "trained on")
     parser.add_argument("--variance", required=True, type=float, help="the variance of the data the GAN is trained on")
     parser.add_argument("--seed", required=False, default=0, type=int, help="seed for generating test data")
-
+    parser.add_argument("--data", required=True, type=str, choices={'gaussian_mixture', 'circle'},
+                        help="the training data to evaluate based on")
     args = vars(parser.parse_args())
     gan, d_state, g_state = GAN.load_gan_from_file(args['path_to_gan'])
-    _ = evaluate_gan(gan, d_state, g_state,
-                     num_modes=args['num_components'],
-                     var=args['variance'],
-                     seed=args['seed'])
+    if args['data'] == 'gaussian_mixture':
+        _ = evaluate_gan_gaussian(gan, d_state, g_state,
+                                  num_modes=args['num_components'],
+                                  var=args['variance'],
+                                  seed=args['seed'])
+    if args['data'] == 'circle':
+        evaluate_gan_circular(gan, d_state, g_state,
+                              num_circles=args['num_components'],
+                              var=args['variance'],
+                              seed=args['seed'])

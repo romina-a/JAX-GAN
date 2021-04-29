@@ -279,6 +279,9 @@ class GAN:
     def _g_loss(self, g_params, d_params, z, k):
         """
         Warning if k is negative, batch_size - k bottom samples are used to calculate error
+
+        Note: You can adjust this method to perform random or bottom updates
+
         :param g_params:
         :param d_params:
         :param z:
@@ -288,7 +291,7 @@ class GAN:
         fake_ims = self.g['apply'](g_params, z)
 
         fake_predictions = self.d['apply'](d_params, fake_ims)
-        # fake_predictions = sort(fake_predictions, 0)
+        fake_predictions = sort(fake_predictions, 0)
         if k > 0:
             fake_predictions = jnp.flip(fake_predictions, 0)
         # fake_predictions = jnp.flip(fake_predictions, 0)
@@ -301,6 +304,7 @@ class GAN:
     @partial(jit, static_argnums=(0, 6))
     def train_step(self, i, prng_key, d_state, g_state, real_samples, k):
         """
+        # TODO add description
         !: call init function before train_step
 
         :param i: (int) step number
@@ -311,6 +315,7 @@ class GAN:
         :param k: (int) to choose top k for training generator, if None all elements are chosen
         :return: updated discriminator and generator states and discriminator and generator loss values
         """
+
         k = k or self.batch_size
         prng1, prng2 = random.split(prng_key, 2)
         d_params = self.d_opt['get_params'](d_state)
@@ -322,6 +327,41 @@ class GAN:
 
         z = random.normal(prng2, (self.batch_size, *self.g_input_shape))
         g_loss_value, g_grads = value_and_grad(self._g_loss)(g_params, d_params, z, k)
+        g_state = self.g_opt['update'](i, g_grads, g_state)
+
+        return d_state, g_state, d_loss_value, g_loss_value
+
+    @partial(jit, static_argnums=(0, 6))
+    def adjusted_train_step(self, i,  prng_key, d_state, g_state, real_samples, k):
+        """
+        # TODO add description
+        !: call init function before train_step
+
+        :param i: (int) step number
+        :param prng_key: (jax.random.PRNGKey) used to create random samples from the generator
+        :param d_state: previous discriminator state
+        :param g_state: previous generator state
+        :param real_samples: (np/jnp array) samples form the training set
+        :param k: (int) to choose top k for training generator, if None all elements are chosen
+        :return: updated discriminator and generator states and discriminator and generator loss values
+        """
+
+        k = k or self.batch_size
+        prng1, prng2 = random.split(prng_key, 2)
+        d_params = self.d_opt['get_params'](d_state)
+        g_params = self.g_opt['get_params'](g_state)
+
+        g_z = random.normal(prng2, (self.batch_size, *self.g_input_shape))
+        d_z = random.normal(prng1, (self.batch_size, *self.g_input_shape))
+
+        g_z_rating = self.rate_samples(self.generate_samples(g_z, g_state), d_state)
+        g_z = g_z[g_z_rating.argsort(axis=0).flatten()]
+        g_z = g_z[-k:]
+
+        d_loss_value, d_grads = value_and_grad(self._d_loss)(d_params, g_params, d_z, real_samples)
+        d_state = self.d_opt['update'](i, d_grads, d_state)
+
+        g_loss_value, g_grads = value_and_grad(self._g_loss)(g_params, d_params, g_z, len(g_z))
         g_state = self.g_opt['update'](i, g_grads, g_state)
 
         return d_state, g_state, d_loss_value, g_loss_value
