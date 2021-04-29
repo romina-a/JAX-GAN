@@ -278,9 +278,7 @@ class GAN:
     @partial(jit, static_argnums=(0, 4))
     def _g_loss(self, g_params, d_params, z, k):
         """
-        TODO: What is a smart way to make negative k be bottom-k update?
-            -using abs: jit error
-            -multiply by sign of k?
+        Warning if k is negative, batch_size - k bottom samples are used to calculate error
         :param g_params:
         :param d_params:
         :param z:
@@ -290,8 +288,10 @@ class GAN:
         fake_ims = self.g['apply'](g_params, z)
 
         fake_predictions = self.d['apply'](d_params, fake_ims)
-        fake_predictions = sort(fake_predictions, 0)
-        fake_predictions = jnp.flip(fake_predictions, 0)
+        # fake_predictions = sort(fake_predictions, 0)
+        if k > 0:
+            fake_predictions = jnp.flip(fake_predictions, 0)
+        # fake_predictions = jnp.flip(fake_predictions, 0)
         fake_predictions = fake_predictions[:k]
 
         loss = self.loss_function(fake_predictions, jnp.ones_like(fake_predictions))

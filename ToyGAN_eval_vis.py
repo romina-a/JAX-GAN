@@ -75,6 +75,10 @@ def evaluate_gan(gan, d_state, g_state, num_modes, var, seed=0):
           f"[3,4):{len(dists[(dists >= sd * 3) & (dists < sd * 4)]) / len(dists) * 100}, "
           f"[4,inf):{len(dists[(dists >= sd * 4)]) / len(dists) * 100}")
 
+    mode, counts = np.unique(mode_inds[dists <= 0.2], return_counts=True)
+    plt.bar(mode, counts)
+    plt.show()
+
     return mode_inds, dists
 
 
