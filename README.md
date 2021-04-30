@@ -4,6 +4,8 @@ The goal of the project is to reproduce the results of
 *Top-k Training of GANs: Improving GAN Performance by Throwing Away Bad
 Samples* https://arxiv.org/abs/2002.06224
 
+Note: The saved models are not optimized and are too big to commit.
+
 # ------------***Vanilla GAN***-----------
 
 # Training the GANs on Toy Tasks
