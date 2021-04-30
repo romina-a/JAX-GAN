@@ -9,7 +9,7 @@ import time
 from Models import mlp_generator_2d, mlp_discriminator, GAN
 from Models import BCE_from_logits
 from ToyData import get_gaussian_mixture, get_circular
-from ToyGAN_eval_vis import plot_samples_scatter
+from ToyGAN_eval_vis import plot_samples_scatter, visualize_gan_state
 from functools import partial
 
 # this is to raise exception when nans are created
@@ -94,11 +94,24 @@ def train(num_components, variance=gaussian_variance_default,
             prev_time = time.time()
             fakes = gan.generate_samples(z, g_state)
             save_adr_plot = None
-            if save_adr_plots_folder is not None: save_adr_plot = save_adr_plots_folder + f"{dataset}-{num_components}-{top_k}-{i // 1000}.png"
+            # save_adr_plot2 = None
+            if save_adr_plots_folder is not None:
+                save_adr_plot = save_adr_plots_folder + f"{dataset}-{num_components}-{top_k}-{i // 1000}.png"
+            # if save_adr_plots_folder is not None:
+            #     save_adr_plot2 = save_adr_plots_folder + f"{dataset}-{num_components}-{top_k}-{i // 1000}-state"
             plot_samples_scatter(fakes, real_ims,
                                  save_adr=save_adr_plot,
                                  samples_ratings=gan.rate_samples(fakes, d_state),
                                  show=show_plots)
+            # visualize_gan_state(gan, d_state, g_state, ls_start=-4, ls_stop=4,
+            #                     ls_num=100, apply_sigmoid=True, plot_gen=True, show=False,
+            #                     save_adr=save_adr_plot2+'1.png'
+            #                     )
+            # visualize_gan_state(gan, d_state, g_state, ls_start=-4, ls_stop=4,
+            #                     ls_num=100, apply_sigmoid=True, plot_gen=False, show=False,
+            #                     save_adr=save_adr_plot2 + '2.png'
+            #                     )
+
             # plot_samples_scatter(gan.generate_samples(z, g_state))
         # save the model in the middle of training for gradient analysis
         if save_intermediate and save_adr_model_folder is not None and i == num_iter//2:

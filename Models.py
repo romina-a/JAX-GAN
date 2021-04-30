@@ -304,8 +304,10 @@ class GAN:
     @partial(jit, static_argnums=(0, 6))
     def train_step(self, i, prng_key, d_state, g_state, real_samples, k):
         """
-        # TODO add description
         !: call init function before train_step
+
+        # Original train step with top k used in the project
+        # The top-k are chosen -->in<-- the generators loss function
 
         :param i: (int) step number
         :param prng_key: (jax.random.PRNGKey) used to create random samples from the generator
@@ -334,8 +336,10 @@ class GAN:
     @partial(jit, static_argnums=(0, 6))
     def adjusted_train_step(self, i,  prng_key, d_state, g_state, real_samples, k):
         """
-        # TODO add description
         !: call init function before train_step
+
+        # An alternative top-k implementation for train step
+        # The top-k are chosen -->before<-- the generators loss function
 
         :param i: (int) step number
         :param prng_key: (jax.random.PRNGKey) used to create random samples from the generator

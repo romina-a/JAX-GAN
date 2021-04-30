@@ -45,7 +45,10 @@ def plot_samples_scatter(samples, samples2=None, samples_ratings=None, save_adr=
         plt.clf()
 
 
-def visualize_gan_state(gan, d_state, g_state, ls_start=-6, ls_stop=6, ls_num=100, apply_sigmoid=True, plot_gen=True):
+def visualize_gan_state(gan, d_state, g_state, ls_start=-6, ls_stop=6,
+                        ls_num=100, apply_sigmoid=True, plot_gen=True,
+                        save_adr=None, show=True
+                        ):
     z = jax.random.normal(jax.random.PRNGKey(0), (1000, 2))
     x, y = jnp.meshgrid(jnp.linspace(ls_start, ls_stop, ls_num), jnp.linspace(ls_start, ls_stop, ls_num))
     grid = jnp.concatenate((x.reshape((x.size, 1)), y.reshape((y.size, 1))), axis=1)
@@ -54,9 +57,9 @@ def visualize_gan_state(gan, d_state, g_state, ls_start=-6, ls_stop=6, ls_num=10
         ratings = sigmoid(ratings)
     if plot_gen:
         plot_samples_scatter(samples=grid, samples2=gan.generate_samples(z, g_state),
-                             samples_ratings=ratings)
+                             samples_ratings=ratings, save_adr=save_adr, show=show)
     else:
-        plot_samples_scatter(samples=grid, samples_ratings=ratings)
+        plot_samples_scatter(samples=grid, samples_ratings=ratings, save_adr=save_adr, show=show)
 
 
 # ---------------------------- Gaussian Mixture Evaluation -------------------------------
